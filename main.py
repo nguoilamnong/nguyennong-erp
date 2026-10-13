@@ -22,7 +22,9 @@ from database import get_db, hash_pw
 app = FastAPI(title="Nguyên Nông Group - Hệ Thống Quản Lý")
 
 # Serve static files (logo, scripts, styles)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Helper to check low stock and trigger email alert
 def check_and_alert_low_stock(product_id: int):
@@ -35,10 +37,44 @@ def check_and_alert_low_stock(product_id: int):
         c.execute("SELECT value FROM settings WHERE key = 'alert_email_receiver'")
         row = c.fetchone()
         receivers = row["value"] if row else "admin@nguyennong.vn"
-        
-        # Log alert (In production, if SMTP configured, it sends real email)
-        print(f"⚠️ [CẢNH BÁO TỒN KHO THẤP] Linh kiện: {prod['name']} ({prod['code']}) còn {prod['stock_qty']} {prod['unit']} (Mức tối thiểu: {prod['min_alert_qty']}) -> Gửi cảnh báo tới: {receivers}")
+        print(f"⚠️ [CẢNH BÁO TỒN KHO THẤP] Linh kiện: {prod['name']} ({prod['code']}) còn {prod['stock_qty']} {prod['unit']} -> Gửi tới: {receivers}")
     conn.close()
+
+# ----------------- TẠO LINK XEM TỬ TẠM THỜI (HẾT HẠN 18H 13/10/2026) ----------------- #
+DEMO_EXPIRATION = datetime(2026, 10, 13, 18, 0, 0)
+
+@app.get("/demo")
+def demo_access():
+    now = datetime.now()
+    if now > DEMO_EXPIRATION:
+        return HTMLResponse(content="""
+        <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #FFF5F5; color: #9B1C1C; min-height: 100vh;">
+            <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid #F87171;">
+                <h2 style="color: #DC2626;">ĐƯỜNG LINK TRẢI NGHIỆM ĐÃ HẾT HẠN</h2>
+                <p style="color: #4B5563; font-size: 14px; line-height: 1.6;">Đường link tạm này được Nguyên Nông Group cài đặt chỉ tồn tại đến <strong>18:00 ngày 13/10/2026</strong> và hiện tại đã bị hủy tự động để đảm bảo an toàn bảo mật.</p>
+                <p style="color: #6B7280; font-size: 13px;">Vui lòng liên hệ Admin để được cấp tài khoản chính thức.</p>
+            </div>
+        </div>
+        """, status_code=403)
+
+    template_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
+    with open(template_file, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # Tự động bỏ qua màn hình đăng nhập và gán phiên xem thử khách VIP
+    guest_script = """
+    <script>
+        localStorage.setItem('nng_user', JSON.stringify({
+            id: 999,
+            username: 'khach_trai_nghiem',
+            full_name: 'Khách Trải Nghiệm (Hết Hạn 18h)',
+            role: 'admin',
+            email: 'demo@nguyennong.vn'
+        }));
+    </script>
+    """
+    html = html.replace("</head>", f"{guest_script}</head>")
+    return HTMLResponse(content=html)
 
 # ----------------- API ROUTES ----------------- #
 
@@ -515,6 +551,7 @@ def update_settings(data: dict):
 # 7. Serve Web App Single Page
 @app.get("/", response_class=HTMLResponse)
 def index():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
+    template_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
+    with open(template_file, "r", encoding="utf-8") as f:
         return f.read()
 

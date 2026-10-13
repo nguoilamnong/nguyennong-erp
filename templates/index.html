@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nguyên Nông Group - Quản Lý Vật Tư & Báo Giá</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        earth: {
+                            50: '#FDF8F3',
+                            100: '#F7EFE5',
+                            200: '#EBD8C3',
+                            300: '#DDBFA0',
+                            400: '#C79A67',
+                            500: '#B47B3E', // Thổ chủ đạo (Nâu vàng đất)
+                            600: '#945F2B',
+                            700: '#71461E',
+                            800: '#4D2F14',
+                            900: '#321D0A'
+                        },
+                        fire: {
+                            500: '#C85A17', // Hỏa tương sinh (Đỏ gạch / Cam đất)
+                            600: '#A4420A'
+                        },
+                        gold: {
+                            400: '#FBBF24',
+                            500: '#D97706',
+                            600: '#B45309'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FDFBF7;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #DDBFA0;
+            border-radius: 4px;
+        }
+        /* Print layout for A4 Quote */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-quote, #printable-quote * {
+                visibility: visible;
+            }
+            #printable-quote {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 15mm;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .a4-preview {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 20mm;
+            margin: auto;
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(77, 47, 20, 0.15);
+        }
+    </style>
+</head>
+<body class="text-stone-800 antialiased flex flex-col min-h-screen">
+
+    <!-- LOGIN MODAL (Hiện khi chưa đăng nhập) -->
+    <div id="login-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-md w-full overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-earth-700 via-earth-800 to-stone-900 p-8 text-center text-white relative">
+                <div class="w-20 h-20 mx-auto mb-3 bg-white p-1 rounded-2xl shadow-lg border-2 border-gold-400">
+                    <img src="/static/logo_nng.png" alt="NNG Logo" class="w-full h-full object-contain">
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight text-gold-400">NGUYÊN NÔNG GROUP</h2>
+                <p class="text-xs text-earth-200 mt-1 uppercase tracking-wider font-medium">Hệ Thống Quản Lý Vật Tư & Báo Giá</p>
+                <div class="inline-block mt-3 px-3 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full border border-amber-500/30">
+                    Mệnh Thành Đầu Thổ (1999) • Hanh Thông - Vững Bền
+                </div>
+            </div>
+
+            <div class="p-8">
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-earth-800 uppercase tracking-wider mb-2">Tên đăng nhập</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400">
+                                <i data-lucide="user" class="w-5 h-5"></i>
+                            </span>
+                            <input type="text" id="login-username" required placeholder="HieuNNG / TungNNG / HuyNNG / PhiNNG"
+                                class="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:border-earth-500 focus:ring-2 focus:ring-earth-200 outline-none text-sm transition">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-earth-800 uppercase tracking-wider mb-2">Mật khẩu</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400">
+                                <i data-lucide="lock" class="w-5 h-5"></i>
+                            </span>
+                            <input type="password" id="login-password" required placeholder="Nhập mật khẩu an toàn của bạn"
+                                class="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:border-earth-500 focus:ring-2 focus:ring-earth-200 outline-none text-sm transition">
+                        </div>
+                    </div>
+
+                    <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
+
+                    <button type="submit"
+                        class="w-full py-3.5 px-4 bg-gradient-to-r from-earth-600 to-fire-500 hover:from-earth-700 hover:to-fire-600 text-white font-bold rounded-xl shadow-lg shadow-earth-600/30 transition transform hover:-translate-y-0.5">
+                        Đăng Nhập Hệ Thống
+                    </button>
+
+                    <div class="mt-6 pt-4 border-t border-stone-100 text-center text-xs text-stone-500">
+                        <span class="font-semibold text-earth-700">4 Tài khoản Admin Toàn Quyền:</span><br>
+                        <code>HieuNNG</code>, <code>TungNNG</code>, <code>HuyNNG</code>, <code>PhiNNG</code>
+                        <p class="text-[11px] text-stone-400 mt-1">(Mật khẩu an toàn xem trong file <strong>MAT_KHAU_ADMIN_NNG.txt</strong>)</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="flex flex-1 min-h-screen">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-earth-900 text-earth-100 flex flex-col justify-between shadow-2xl z-20">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 flex items-center space-x-3 border-b border-earth-800/80 bg-earth-950/40">
+                    <img src="/static/logo_nng.png" alt="NNG" class="w-11 h-11 rounded-xl bg-white p-0.5 shadow-md border border-gold-500">
+                    <div>
+                        <h1 class="font-extrabold text-sm text-gold-400 tracking-wide">NGUYÊN NÔNG</h1>
+                        <p class="text-[10px] text-earth-300 tracking-wider">GROUP • ERP v1.0</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-3 space-y-1.5 text-sm font-medium">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard"
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition bg-earth-700/60 text-white font-semibold shadow-inner border-l-4 border-gold-400">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 text-gold-400"></i>
+                        <span>Tổng Quan (Dashboard)</span>
+                    </button>
+                    
+                    <button onclick="switchTab('inventory')" id="nav-inventory"
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition hover:bg-earth-800 text-earth-200">
+                        <i data-lucide="boxes" class="w-5 h-5 text-gold-400"></i>
+                        <span>Quản Lý Linh Kiện & Kho</span>
+                    </button>
+
+                    <button onclick="switchTab('quotes')" id="nav-quotes"
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition hover:bg-earth-800 text-earth-200">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-gold-400"></i>
+                        <span>Lập Báo Giá & Hóa Đơn</span>
+                    </button>
+
+                    <button onclick="switchTab('customers')" id="nav-customers"
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition hover:bg-earth-800 text-earth-200">
+                        <i data-lucide="users" class="w-5 h-5 text-gold-400"></i>
+                        <span>Cơ Sở Dữ Liệu Khách</span>
+                    </button>
+
+                    <button onclick="switchTab('settings')" id="nav-settings"
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition hover:bg-earth-800 text-earth-200">
+                        <i data-lucide="settings" class="w-5 h-5 text-gold-400"></i>
+                        <span>Cài Đặt & Phân Quyền</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- User Info Footer -->
+            <div class="p-4 border-t border-earth-800 bg-earth-950/60">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-full bg-earth-600 flex items-center justify-center font-bold text-xs text-white border border-gold-400">
+                            <span id="user-avatar">AD</span>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p id="user-display-name" class="text-xs font-bold text-white truncate">Minh Hiếu</p>
+                            <p id="user-role-badge" class="text-[10px] text-gold-400 truncate">Quản Trị Viên</p>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" title="Đăng xuất" class="p-2 text-earth-400 hover:text-red-400 rounded-lg hover:bg-earth-800 transition">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <!-- Top Header Bar -->
+            <header class="bg-white border-b border-earth-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+                <div class="flex items-center space-x-4">
+                    <span id="current-page-title" class="text-lg font-bold text-earth-900 tracking-tight">Tổng Quan Hệ Thống</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> Real-time Live
+                    </span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openNewQuoteModal()" class="flex items-center space-x-2 bg-gradient-to-r from-earth-600 to-fire-500 hover:from-earth-700 hover:to-fire-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>+ Tạo Báo Giá Mới</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB 1: DASHBOARD -->
+            <section id="tab-dashboard" class="p-8 space-y-6">
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3.5 bg-earth-100 rounded-2xl text-earth-700">
+                            <i data-lucide="banknote" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-stone-500 font-medium">Doanh Thu Đã Xuất HĐ</p>
+                            <h3 id="stat-total-revenue" class="text-xl font-extrabold text-earth-900 mt-0.5">0 đ</h3>
+                            <p class="text-[11px] text-stone-400 mt-0.5"><span id="stat-invoiced-count">0</span> hóa đơn đã chốt</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3.5 bg-amber-50 rounded-2xl text-amber-600">
+                            <i data-lucide="file-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-stone-500 font-medium">Doanh Thu Hôm Nay</p>
+                            <h3 id="stat-today-revenue" class="text-xl font-extrabold text-amber-700 mt-0.5">0 đ</h3>
+                            <p class="text-[11px] text-stone-400 mt-0.5"><span id="stat-today-invoices">0</span> đơn xuất hôm nay</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3.5 bg-blue-50 rounded-2xl text-blue-600">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-stone-500 font-medium">Khách Hàng</p>
+                            <h3 id="stat-total-customers" class="text-xl font-extrabold text-stone-900 mt-0.5">0</h3>
+                            <p class="text-[11px] text-stone-400 mt-0.5">Đã lưu trong CSDL</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-red-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3.5 bg-red-50 rounded-2xl text-red-600">
+                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-stone-500 font-medium">Cảnh Báo Tồn Kho Thấp</p>
+                            <h3 id="stat-low-stock-count" class="text-xl font-extrabold text-red-600 mt-0.5">0</h3>
+                            <p class="text-[11px] text-red-500 mt-0.5">Linh kiện cần nhập thêm</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two columns: Category Breakdown & Low Stock Alert Table -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Low Stock Alert Box -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl border border-earth-200 shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+                                <h4 class="font-bold text-stone-800 text-sm">Danh Sách Cảnh Báo Sắp Hết Hàng (Cần Đặt Mới)</h4>
+                            </div>
+                            <span class="text-xs text-stone-400">Ngưỡng tối thiểu ≤ 5 hoặc tùy chỉnh</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="border-b border-stone-200 text-stone-400 uppercase tracking-wider font-semibold">
+                                        <th class="pb-2.5">Mã LK</th>
+                                        <th class="pb-2.5">Tên Linh Kiện</th>
+                                        <th class="pb-2.5">Ngành</th>
+                                        <th class="pb-2.5 text-center">Còn Lại</th>
+                                        <th class="pb-2.5 text-center">Tối Thiểu</th>
+                                        <th class="pb-2.5 text-right">Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-low-stock-tbody" class="divide-y divide-stone-100">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Category Status -->
+                    <div class="bg-white rounded-2xl border border-earth-200 shadow-sm p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-stone-800 text-sm mb-4">Cơ Cấu Vật Tư Theo Ngành</h4>
+                            <div id="category-summary-list" class="space-y-4">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                        <div class="mt-6 p-4 rounded-xl bg-earth-50 border border-earth-200 text-xs text-earth-800">
+                            <p class="font-bold text-earth-900 mb-1">💡 Mẹo Quản Lý Khởi Nghiệp:</p>
+                            <p>Khi khách đồng ý chốt báo giá, chuyển trạng thái sang <strong>"Xuất Hóa Đơn & Trừ Kho"</strong> để hệ thống tự động cân đối lại số tồn kho tức thì.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity & Recent Quotes -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Recent Stock Logs -->
+                    <div class="bg-white rounded-2xl border border-earth-200 shadow-sm p-6">
+                        <h4 class="font-bold text-stone-800 text-sm mb-4 flex items-center space-x-2">
+                            <i data-lucide="history" class="w-4 h-4 text-earth-600"></i>
+                            <span>Nhật Ký Xuất / Nhập Kho Gần Đây</span>
+                        </h4>
+                        <div id="recent-logs-list" class="space-y-3 text-xs">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Quotes -->
+                    <div class="bg-white rounded-2xl border border-earth-200 shadow-sm p-6">
+                        <h4 class="font-bold text-stone-800 text-sm mb-4 flex items-center space-x-2">
+                            <i data-lucide="receipt" class="w-4 h-4 text-fire-500"></i>
+                            <span>Báo Giá / Hóa Đơn Mới Tạo</span>
+                        </h4>
+                        <div id="recent-quotes-list" class="space-y-3 text-xs">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: INVENTORY & PRODUCTS -->
+            <section id="tab-inventory" class="p-8 space-y-6 hidden">
+                <!-- Filter & Search Bar -->
+                <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3 flex-1 min-w-[280px]">
+                        <div class="relative w-full max-w-md">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" id="prod-search" oninput="loadProducts()" placeholder="Tìm theo mã linh kiện, tên, nhà cung cấp..."
+                                class="w-full pl-9 pr-4 py-2 rounded-xl border border-stone-200 text-xs focus:outline-none focus:border-earth-500">
+                        </div>
+                        <select id="prod-cat-filter" onchange="loadProducts()" class="py-2 px-3 rounded-xl border border-stone-200 text-xs bg-white focus:outline-none">
+                            <option value="all">Tất cả ngành hàng</option>
+                            <option value="Hệ thống tưới">Hệ thống tưới</option>
+                            <option value="Bạt hồ">Bạt hồ</option>
+                            <option value="Năng lượng mặt trời">Năng lượng mặt trời</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openProductModal()" class="flex items-center space-x-1.5 bg-earth-700 hover:bg-earth-800 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-sm transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>+ Thêm Linh Kiện Mới</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <div class="bg-white rounded-2xl border border-earth-200 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-semibold">
+                                <tr>
+                                    <th class="py-3.5 px-4">Mã LK</th>
+                                    <th class="py-3.5 px-4">Tên Linh Kiện / Vật Tư</th>
+                                    <th class="py-3.5 px-4">Danh Mục</th>
+                                    <th class="py-3.5 px-4">ĐVT</th>
+                                    <th class="py-3.5 px-4 text-right">Giá Vốn (Nhập)</th>
+                                    <th class="py-3.5 px-4 text-right">Giá Bán Lẻ (+% Lãi)</th>
+                                    <th class="py-3.5 px-4 text-right">Giá Dự Án (+% Lãi)</th>
+                                    <th class="py-3.5 px-4 text-center">Tồn Kho</th>
+                                    <th class="py-3.5 px-4 text-center">Cảnh Báo</th>
+                                    <th class="py-3.5 px-4 text-center">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-tbody" class="divide-y divide-stone-100">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: QUOTES & INVOICES -->
+            <section id="tab-quotes" class="p-8 space-y-6 hidden">
+                <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="font-bold text-stone-800 text-sm">Danh Sách Bảng Báo Giá & Hóa Đơn</h3>
+                        <select id="quote-status-filter" onchange="loadQuotes()" class="py-1.5 px-3 rounded-xl border border-stone-200 text-xs bg-white">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="draft">Bản nháp (Đang soạn)</option>
+                            <option value="approved_invoiced">Đã chốt & Xuất HĐ (Đã trừ kho)</option>
+                        </select>
+                    </div>
+
+                    <button onclick="openNewQuoteModal()" class="flex items-center space-x-1.5 bg-earth-700 hover:bg-earth-800 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-sm transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>+ Lập Báo Giá Mới</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-earth-200 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-semibold">
+                                <tr>
+                                    <th class="py-3.5 px-4">Mã Phiếu</th>
+                                    <th class="py-3.5 px-4">Loại Báo Giá</th>
+                                    <th class="py-3.5 px-4">Khách Hàng</th>
+                                    <th class="py-3.5 px-4">Số Điện Thoại</th>
+                                    <th class="py-3.5 px-4 text-right">Tổng Tiền</th>
+                                    <th class="py-3.5 px-4 text-center">Trạng Thái</th>
+                                    <th class="py-3.5 px-4 text-center">Trừ Kho</th>
+                                    <th class="py-3.5 px-4">Thời Gian</th>
+                                    <th class="py-3.5 px-4 text-center">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotes-table-tbody" class="divide-y divide-stone-100">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: CUSTOMERS -->
+            <section id="tab-customers" class="p-8 space-y-6 hidden">
+                <div class="bg-white p-5 rounded-2xl border border-earth-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-stone-800 text-sm">Cơ Sở Dữ Liệu Khách Hàng</h3>
+                        <p class="text-xs text-stone-400 mt-0.5">Tự động tích lũy khi tạo báo giá hoặc nhập thủ công</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-earth-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="py-3.5 px-4">STT</th>
+                                <th class="py-3.5 px-4">Họ Tên Khách Hàng</th>
+                                <th class="py-3.5 px-4">Số Điện Thoại</th>
+                                <th class="py-3.5 px-4">Địa Chỉ</th>
+                                <th class="py-3.5 px-4">Phân Loại</th>
+                                <th class="py-3.5 px-4">Ghi Chú</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table-tbody" class="divide-y divide-stone-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 5: SETTINGS & TEAM -->
+            <section id="tab-settings" class="p-8 space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Company Settings -->
+                    <div class="bg-white p-6 rounded-2xl border border-earth-200 shadow-sm">
+                        <h3 class="font-bold text-stone-800 text-base mb-1">Thông Tin Công Ty Trên Báo Giá A4</h3>
+                        <p class="text-xs text-stone-400 mb-5">Bạn có thể tự do chỉnh sửa thông tin này bất cứ lúc nào</p>
+                        
+                        <form onsubmit="saveCompanySettings(event)" class="space-y-4 text-xs">
+                            <div>
+                                <label class="block font-bold text-stone-700 mb-1">Tên công ty / Thương hiệu</label>
+                                <input type="text" id="set-company-name" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-stone-700 mb-1">Slogan / Lĩnh vực</label>
+                                <input type="text" id="set-slogan" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold text-stone-700 mb-1">Hotline tư vấn</label>
+                                    <input type="text" id="set-hotline" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-stone-700 mb-1">Email nhận cảnh báo tồn kho</label>
+                                    <input type="text" id="set-alert-email" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-stone-700 mb-1">Địa chỉ trụ sở / Kho</label>
+                                <input type="text" id="set-address" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-stone-700 mb-1">Thông tin tài khoản ngân hàng</label>
+                                <input type="text" id="set-bank-info" class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-earth-700 hover:bg-earth-800 text-white font-bold rounded-xl shadow-md transition">
+                                Lưu Cập Nhật Thông Tin
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Team Members & Roles -->
+                    <div class="bg-white p-6 rounded-2xl border border-earth-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-stone-800 text-base mb-1">Quản Trị Đội Ngũ (4 Thành Viên)</h3>
+                            <p class="text-xs text-stone-400 mb-5">Phân quyền chi tiết cho từng người sử dụng hệ thống</p>
+                            
+                            <div id="users-list-container" class="space-y-3">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Feng Shui Badge -->
+                        <div class="mt-6 p-4 rounded-xl bg-gradient-to-r from-earth-50 via-amber-50 to-orange-50 border border-amber-200 text-xs">
+                            <div class="flex items-center space-x-2 text-earth-800 font-bold mb-1">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                                <span>Tử Vi Phong Thủy Kỷ Mão 1999 (Thành Đầu Thổ)</span>
+                            </div>
+                            <p class="text-stone-600 leading-relaxed">
+                                Giao diện được thiết kế độc quyền với bảng màu <strong>Thổ vượng (Vàng đất, Nâu thành quách)</strong> kết hợp <strong>Hỏa sinh Thổ (Đỏ cam đất)</strong>, biểu trưng cho sự vững vàng như lũy thành, tài lộc hanh thông cho Nguyên Nông Group.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: ADD / EDIT PRODUCT -->
+    <div id="product-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-xl w-full p-6 overflow-y-auto max-h-[90vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+                <h3 id="product-modal-title" class="font-bold text-base text-earth-900">Thêm Mới Linh Kiện Vật Tư</h3>
+                <button onclick="closeProductModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form id="product-form" onsubmit="saveProduct(event)" class="mt-4 space-y-4 text-xs">
+                <input type="hidden" id="prod-form-id">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Mã linh kiện *</label>
+                        <input type="text" id="prod-form-code" required placeholder="VD: TUOI-006, BAT-005..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Ngành hàng *</label>
+                        <select id="prod-form-category" required class="w-full p-2.5 rounded-xl border border-stone-200 bg-white">
+                            <option value="Hệ thống tưới">Hệ thống tưới</option>
+                            <option value="Bạt hồ">Bạt hồ</option>
+                            <option value="Năng lượng mặt trời">Năng lượng mặt trời</option>
+                            <option value="Khác">Vật tư phụ khác</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Tên linh kiện / thiết bị *</label>
+                    <input type="text" id="prod-form-name" required placeholder="VD: Đầu béc nhỏ giọt, Tấm pin 550W..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Đơn vị tính *</label>
+                        <input type="text" id="prod-form-unit" required placeholder="Cái, Cuộn, Mét, Tấm, m²..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Nhà cung cấp / Xuất xứ</label>
+                        <input type="text" id="prod-form-supplier" placeholder="VD: Việt An Nông, Israel, DAT Solar..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Giá vốn (Nhập tay) *</label>
+                        <input type="number" id="prod-form-cost" required oninput="calcPreviewPrices()" placeholder="0" class="w-full p-2 rounded-lg border border-stone-300 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">% Lãi Bán Lẻ</label>
+                        <input type="number" id="prod-form-retail-markup" value="30" oninput="calcPreviewPrices()" class="w-full p-2 rounded-lg border border-stone-300">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">% Lãi Dự Án</label>
+                        <input type="number" id="prod-form-project-markup" value="20" oninput="calcPreviewPrices()" class="w-full p-2 rounded-lg border border-stone-300">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 p-2 bg-amber-50/50 rounded-lg text-[11px] text-earth-800">
+                    <div>Giá bán lẻ tự tính: <strong id="preview-retail-price" class="text-earth-900">0 đ</strong></div>
+                    <div>Giá dự án tự tính: <strong id="preview-project-price" class="text-earth-900">0 đ</strong></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Số lượng tồn kho ban đầu</label>
+                        <input type="number" id="prod-form-stock" value="10" class="w-full p-2.5 rounded-xl border border-stone-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Ngưỡng cảnh báo tối thiểu</label>
+                        <input type="number" id="prod-form-min-alert" value="5" class="w-full p-2.5 rounded-xl border border-stone-200">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Ghi chú kỹ thuật</label>
+                    <input type="text" id="prod-form-notes" placeholder="Quy cách, lưu lượng, thông số..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                </div>
+
+                <div class="pt-3 border-t border-stone-100 flex justify-end space-x-2">
+                    <button type="button" onclick="closeProductModal()" class="py-2 px-4 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50">Hủy</button>
+                    <button type="submit" class="py-2 px-5 bg-earth-700 hover:bg-earth-800 text-white font-bold rounded-xl shadow-md">Lưu Linh Kiện</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADJUST STOCK -->
+    <div id="stock-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-sm w-full p-6">
+            <h3 class="font-bold text-base text-stone-900 mb-2">Nhập / Điều Chỉnh Tồn Kho</h3>
+            <p id="stock-modal-prod-name" class="text-xs text-stone-500 mb-4"></p>
+            <form onsubmit="saveStockAdjust(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="stock-adjust-pid">
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Số lượng điều chỉnh (+ Nhập thêm, - Giảm)</label>
+                    <input type="number" id="stock-adjust-qty" step="any" required placeholder="VD: +20 hoặc -5" class="w-full p-2.5 rounded-xl border border-stone-200 font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Lý do điều chỉnh</label>
+                    <input type="text" id="stock-adjust-reason" required placeholder="VD: Nhập hàng từ NCC, Kiểm kê kho..." class="w-full p-2.5 rounded-xl border border-stone-200">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeStockModal()" class="py-2 px-4 rounded-xl border border-stone-200 text-stone-600">Đóng</button>
+                    <button type="submit" class="py-2 px-5 bg-earth-700 hover:bg-earth-800 text-white font-bold rounded-xl">Xác Nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE QUOTE (FULL SCREEN / COMFORTABLE) -->
+    <div id="quote-modal" class="fixed inset-0 bg-stone-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-5xl w-full p-6 overflow-y-auto max-h-[95vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+                <div>
+                    <h3 class="font-bold text-base text-earth-900 flex items-center space-x-2">
+                        <span>Lập Bảng Báo Giá Khách Hàng (Tùy Biến Bán Lẻ / Dự Án)</span>
+                    </h3>
+                    <p class="text-xs text-stone-400">Tự động tính toán giá lẻ/dự án, công thợ, và xuất file in A4 chuẩn chỉnh</p>
+                </div>
+                <button onclick="closeQuoteModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+
+            <form id="quote-form" onsubmit="saveQuote(event)" class="mt-4 space-y-4 text-xs flex-1 flex flex-col justify-between">
+                <!-- Customer & Quote Type Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-earth-50/60 rounded-xl border border-earth-200">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Loại Báo Giá *</label>
+                        <select id="quote-type-select" onchange="toggleQuoteTypeFields()" class="w-full p-2 rounded-lg border border-earth-300 font-bold bg-white text-earth-900">
+                            <option value="project">🌟 Báo Giá Dự Án (Bao gồm công thợ + vật tư)</option>
+                            <option value="retail">🛒 Báo Giá Bán Lẻ (Chỉ linh kiện)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Tên khách hàng / Chủ đầu tư *</label>
+                        <input type="text" id="quote-cust-name" required placeholder="Anh Tuấn - Vườn Sầu Riêng..." class="w-full p-2 rounded-lg border border-stone-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Số điện thoại *</label>
+                        <input type="text" id="quote-cust-phone" required placeholder="09xxxxxxxx" class="w-full p-2 rounded-lg border border-stone-200">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Địa chỉ / Vị trí công trình</label>
+                        <input type="text" id="quote-cust-address" placeholder="Tây Nguyên, Bình Phước,..." class="w-full p-2 rounded-lg border border-stone-200">
+                    </div>
+                </div>
+
+                <!-- Product items table in quote -->
+                <div class="border border-stone-200 rounded-xl overflow-hidden">
+                    <div class="p-3 bg-stone-50 border-b border-stone-200 flex items-center justify-between">
+                        <span class="font-bold text-stone-700 uppercase tracking-wider">Danh Sách Linh Kiện & Vật Tư Xuất Cho Khách</span>
+                        <button type="button" onclick="addQuoteItemRow()" class="py-1 px-3 bg-earth-700 hover:bg-earth-800 text-white rounded-lg font-bold flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>+ Thêm dòng linh kiện</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-64">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-stone-100 text-stone-500 uppercase tracking-wider font-semibold">
+                                <tr>
+                                    <th class="py-2.5 px-3">Chọn Linh Kiện Tồn Kho</th>
+                                    <th class="py-2.5 px-3">Tên / Quy Cách</th>
+                                    <th class="py-2.5 px-3 w-16">ĐVT</th>
+                                    <th class="py-2.5 px-3 w-20 text-center">SL</th>
+                                    <th class="py-2.5 px-3 text-right">Đơn Giá Bán</th>
+                                    <th class="py-2.5 px-3 text-right">Thành Tiền</th>
+                                    <th class="py-2.5 px-3 w-10 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="quote-items-tbody" class="divide-y divide-stone-100">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Custom Cost Sections for Projects (Linh hoạt thêm bớt hạng mục) -->
+                <div id="project-extra-fields" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-amber-50/40 rounded-xl border border-amber-200">
+                    <div>
+                        <label class="block font-bold text-earth-900 mb-1">🛠️ Tiền Công Thợ Thi Công Lắp Đặt</label>
+                        <input type="number" id="quote-labor-cost" value="0" oninput="calcQuoteTotals()" class="w-full p-2 rounded-lg border border-stone-300 font-bold text-right" placeholder="0">
+                        <span class="text-[10px] text-stone-500">Nhân công trải bạt, đi ống, gắn pin</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-earth-900 mb-1">🚚 Chi Phí Vận Chuyển Đến Công Trình</label>
+                        <input type="number" id="quote-transport-cost" value="0" oninput="calcQuoteTotals()" class="w-full p-2 rounded-lg border border-stone-300 font-bold text-right" placeholder="0">
+                        <span class="text-[10px] text-stone-500">Cước xe tải, giao hàng tận nơi</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-earth-900 mb-1">📋 Chi Phí Tùy Chọn Khác (Nếu Có)</label>
+                        <div class="flex space-x-1.5">
+                            <input type="text" id="quote-other-cost-note" placeholder="Tên chi phí (VD: Thiết kế 3D)" class="w-2/3 p-2 rounded-lg border border-stone-300 text-xs">
+                            <input type="number" id="quote-other-cost" value="0" oninput="calcQuoteTotals()" class="w-1/3 p-2 rounded-lg border border-stone-300 font-bold text-right" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary & Total -->
+                <div class="flex flex-col md:flex-row justify-between items-end gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
+                    <div class="w-full md:w-1/2">
+                        <label class="block font-bold text-stone-700 mb-1">Ghi chú hoặc điều khoản bảo hành</label>
+                        <textarea id="quote-notes" rows="2" placeholder="VD: Bảo hành bạt 5 năm, hệ thống tưới 2 năm..." class="w-full p-2 rounded-lg border border-stone-200 text-xs"></textarea>
+                    </div>
+
+                    <div class="w-full md:w-1/2 space-y-1.5 text-right">
+                        <div class="flex justify-between text-stone-600">
+                            <span>Tiền linh kiện vật tư:</span>
+                            <span id="summary-items-subtotal" class="font-bold">0 đ</span>
+                        </div>
+                        <div id="summary-extra-container" class="flex justify-between text-stone-600">
+                            <span>Tổng chi phí thi công / vận chuyển:</span>
+                            <span id="summary-extra-total" class="font-bold">0 đ</span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold text-earth-900 pt-2 border-t border-stone-300">
+                            <span>TỔNG CỘNG THANH TOÁN:</span>
+                            <span id="summary-grand-total" class="text-fire-600 text-lg">0 đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-stone-100 flex justify-end space-x-2">
+                    <button type="button" onclick="closeQuoteModal()" class="py-2.5 px-4 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50">Hủy</button>
+                    <button type="submit" class="py-2.5 px-6 bg-earth-700 hover:bg-earth-800 text-white font-bold rounded-xl shadow-md">Lưu Báo Giá (Bản Nháp)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: A4 PRINTABLE QUOTE / INVOICE PREVIEW -->
+    <div id="a4-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 overflow-y-auto p-4 hidden">
+        <div class="max-w-4xl mx-auto my-6">
+            <!-- Action Bar -->
+            <div class="no-print bg-stone-900 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-xl">
+                <div class="flex items-center space-x-2">
+                    <span id="preview-modal-badge" class="px-3 py-1 bg-amber-500 text-white font-bold text-xs rounded-full uppercase tracking-wider">BẢNG BÁO GIÁ</span>
+                    <span id="preview-modal-code" class="text-xs text-stone-300 font-mono">BG-20261013-001</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button id="btn-approve-invoice" onclick="approveAndDeductStock()" class="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        <span>Khách Đồng Ý -> Xuất Hóa Đơn & Trừ Kho</span>
+                    </button>
+                    <button onclick="window.print()" class="py-2 px-4 bg-gold-500 hover:bg-gold-600 text-stone-900 font-bold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>In Khổ A4 / Lưu PDF</span>
+                    </button>
+                    <button onclick="closeA4Modal()" class="p-2 text-stone-400 hover:text-white rounded-lg">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- THE A4 DOCUMENT BODY -->
+            <div id="printable-quote" class="a4-preview text-stone-800 text-xs">
+                <!-- Header with Logo and Company info -->
+                <div class="flex items-start justify-between border-b-2 border-earth-600 pb-5 mb-5">
+                    <div class="flex items-center space-x-4">
+                        <img src="/static/logo_nng.png" alt="NNG Logo" class="w-20 h-20 object-contain rounded-xl border border-earth-300 p-1">
+                        <div>
+                            <h2 id="print-company-name" class="text-lg font-black text-earth-900 uppercase tracking-wide">CÔNG TY TNHH NGUYÊN NÔNG GROUP</h2>
+                            <p id="print-slogan" class="text-[11px] text-earth-700 font-semibold italic">Giải Pháp Nông Nghiệp Bền Vững - Hệ Thống Tưới • Bạt Hồ • Điện Mặt Trời</p>
+                            <p class="text-[10px] text-stone-600 mt-1"><strong>Hotline:</strong> <span id="print-hotline">0988 123 456</span> | <strong>Email:</strong> <span id="print-email">contact@nguyennong.vn</span></p>
+                            <p class="text-[10px] text-stone-600"><strong>Địa chỉ:</strong> <span id="print-address">Khu Nông Nghiệp Công Nghệ Cao, Việt Nam</span></p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div id="print-doc-badge" class="inline-block px-3 py-1 bg-earth-800 text-white font-extrabold text-sm rounded uppercase tracking-wider mb-1">BẢNG BÁO GIÁ</div>
+                        <p class="font-mono font-bold text-earth-800" id="print-quote-code">BG-20261013-001</p>
+                        <p class="text-[10px] text-stone-500" id="print-created-date">Ngày: 13/10/2026</p>
+                    </div>
+                </div>
+
+                <!-- Customer Details Box -->
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-5 grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-stone-400">Khách Hàng / Đơn Vị:</p>
+                        <p id="print-cust-name" class="font-bold text-sm text-stone-900">Anh Tuấn</p>
+                        <p id="print-cust-address" class="text-stone-600 text-[11px]">Gia Lai</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-stone-400">Số Điện Thoại:</p>
+                        <p id="print-cust-phone" class="font-bold text-sm text-stone-900">0987 654 321</p>
+                        <p class="text-stone-600 text-[11px]">Nhân viên phụ trách: <span id="print-creator-name" class="font-semibold">Minh Hiếu</span></p>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="mb-5">
+                    <table class="w-full text-left text-xs border border-stone-300">
+                        <thead>
+                            <tr class="bg-earth-800 text-white font-bold text-[11px]">
+                                <th class="p-2 border border-stone-300 text-center w-8">STT</th>
+                                <th class="p-2 border border-stone-300">Danh Mục Thiết Bị / Vật Tư</th>
+                                <th class="p-2 border border-stone-300 text-center w-14">ĐVT</th>
+                                <th class="p-2 border border-stone-300 text-center w-14">SL</th>
+                                <th class="p-2 border border-stone-300 text-right w-24">Đơn Giá (VNĐ)</th>
+                                <th class="p-2 border border-stone-300 text-right w-28">Thành Tiền (VNĐ)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="print-items-tbody">
+                            <!-- Items inserted here -->
+                        </tbody>
+                        <tbody id="print-extra-tbody">
+                            <!-- Labor / transport inserted here -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-stone-100 font-extrabold text-stone-900">
+                                <td colspan="5" class="p-2.5 border border-stone-300 text-right uppercase tracking-wider text-earth-900">TỔNG CỘNG THANH TOÁN:</td>
+                                <td id="print-grand-total" class="p-2.5 border border-stone-300 text-right text-sm text-fire-600">0 đ</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Terms and Bank Account -->
+                <div class="grid grid-cols-2 gap-4 border-t border-stone-200 pt-4 mb-8 text-[11px]">
+                    <div>
+                        <p class="font-bold text-earth-900 uppercase mb-1">Thông Tin Thanh Toán:</p>
+                        <p id="print-bank-info" class="text-stone-700 font-mono bg-stone-50 p-2 rounded border border-stone-200">
+                            STK: 190368888888 - Techcombank - NGUYEN NONG GROUP
+                        </p>
+                        <p class="text-[10px] text-stone-500 mt-2">Ghi chú: <span id="print-notes">Báo giá có hiệu lực trong vòng 15 ngày.</span></p>
+                    </div>
+                    <div class="text-right flex flex-col justify-between">
+                        <div>
+                            <p class="font-bold text-stone-700">ĐẠI DIỆN NGUYÊN NÔNG GROUP</p>
+                            <p class="text-[10px] text-stone-400 italic">(Ký và ghi rõ họ tên)</p>
+                        </div>
+                        <div class="pt-12">
+                            <p class="font-bold text-earth-900 uppercase">NGUYÊN NÔNG GROUP</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer branding -->
+                <div class="text-center text-[9px] text-stone-400 border-t border-stone-200 pt-2">
+                    Nguyên Nông Group - Đồng Hành Cùng Nhà Nông Bền Vững & Thịnh Vượng
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // Current state
+        let currentUser = null;
+        let allProducts = [];
+        let currentQuoteDetail = null;
+
+        // Number formatter
+        function formatVND(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+        }
+
+        // Init Lucide
+        function updateIcons() {
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Check authentication on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('nng_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                applyUserSession();
+            } else {
+                document.getElementById('login-modal').classList.remove('hidden');
+            }
+            updateIcons();
+        });
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const errBox = document.getElementById('login-error');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errBox.textContent = data.detail || 'Đăng nhập không thành công';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+
+                currentUser = data.user;
+                localStorage.setItem('nng_user', JSON.stringify(currentUser));
+                document.getElementById('login-modal').classList.add('hidden');
+                applyUserSession();
+            } catch (err) {
+                errBox.textContent = 'Lỗi kết nối máy chủ';
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('nng_user');
+            currentUser = null;
+            location.reload();
+        }
+
+        function applyUserSession() {
+            document.getElementById('user-display-name').textContent = currentUser.full_name;
+            document.getElementById('user-avatar').textContent = currentUser.full_name.substring(0, 2).toUpperCase();
+            const roleLabels = { 'admin': 'Quản Trị Viên (CEO)', 'tech': 'Kỹ Thuật Dự Án', 'sales': 'Kinh Doanh & Bán Lẻ' };
+            document.getElementById('user-role-badge').textContent = roleLabels[currentUser.role] || currentUser.role;
+
+            loadDashboard();
+            loadProducts();
+            loadQuotes();
+            loadCustomers();
+            loadSettings();
+            updateIcons();
+        }
+
+        // Switch navigation tabs
+        function switchTab(tab) {
+            const tabs = ['dashboard', 'inventory', 'quotes', 'customers', 'settings'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (navBtn) {
+                    navBtn.className = "w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition hover:bg-earth-800 text-earth-200";
+                }
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tab}`);
+            if (activeNav) {
+                activeNav.className = "w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl transition bg-earth-700/60 text-white font-semibold shadow-inner border-l-4 border-gold-400";
+            }
+
+            const titleMap = {
+                'dashboard': 'Tổng Quan Hệ Thống (Dashboard)',
+                'inventory': 'Quản Lý Danh Mục Linh Kiện & Tồn Kho',
+                'quotes': 'Lập Bảng Báo Giá & Hóa Đơn Trừ Kho',
+                'customers': 'Cơ Sở Dữ Liệu Khách Hàng',
+                'settings': 'Cài Đặt Công Ty & Quản Trị Nhóm'
+            };
+            document.getElementById('current-page-title').textContent = titleMap[tab];
+            updateIcons();
+        }
+
+        // 1. DASHBOARD LOGIC
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard');
+                const data = await res.json();
+
+                document.getElementById('stat-total-revenue').textContent = formatVND(data.total_revenue);
+                document.getElementById('stat-invoiced-count').textContent = data.total_invoiced_count;
+                document.getElementById('stat-today-revenue').textContent = formatVND(data.today_revenue);
+                document.getElementById('stat-today-invoices').textContent = data.today_invoiced_count;
+                document.getElementById('stat-total-customers').textContent = data.total_customers;
+                document.getElementById('stat-low-stock-count').textContent = data.low_stock_count;
+
+                // Render low stock table
+                const lowTbody = document.getElementById('dashboard-low-stock-tbody');
+                lowTbody.innerHTML = '';
+                if (data.low_stock_items.length === 0) {
+                    lowTbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-emerald-600 font-semibold">✅ Toàn bộ linh kiện đều đang ở mức tồn an toàn!</td></tr>';
+                } else {
+                    data.low_stock_items.forEach(p => {
+                        lowTbody.innerHTML += `
+                            <tr class="hover:bg-red-50/50 transition">
+                                <td class="py-2.5 font-mono font-bold text-red-600">${p.code}</td>
+                                <td class="py-2.5 font-medium text-stone-800">${p.name}</td>
+                                <td class="py-2.5 text-stone-500">${p.category}</td>
+                                <td class="py-2.5 text-center font-bold text-red-600 bg-red-100/60 rounded">${p.stock_qty} ${p.unit}</td>
+                                <td class="py-2.5 text-center text-stone-400">${p.min_alert_qty}</td>
+                                <td class="py-2.5 text-right">
+                                    <button onclick="openStockModal(${p.id}, '${p.name}')" class="px-2.5 py-1 bg-earth-700 hover:bg-earth-800 text-white rounded text-[11px] font-bold">
+                                        + Nhập Hàng
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                // Render categories breakdown
+                const catContainer = document.getElementById('category-summary-list');
+                catContainer.innerHTML = '';
+                data.cat_summary.forEach(c => {
+                    catContainer.innerHTML += `
+                        <div class="p-3 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between">
+                            <span class="font-bold text-stone-700">${c.category}</span>
+                            <div class="text-right">
+                                <span class="font-bold text-earth-800">${c.count} sản phẩm</span>
+                                <span class="text-[11px] text-stone-400 block">Tổng tồn: ${c.total_stock}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Render recent stock logs
+                const logsList = document.getElementById('recent-logs-list');
+                logsList.innerHTML = '';
+                data.recent_stock_logs.forEach(l => {
+                    const isPositive = l.change_qty > 0;
+                    logsList.innerHTML += `
+                        <div class="p-2.5 rounded-lg border border-stone-100 flex items-center justify-between ${isPositive ? 'bg-emerald-50/30' : 'bg-orange-50/30'}">
+                            <div>
+                                <p class="font-bold text-stone-800">${l.product_name}</p>
+                                <p class="text-[10px] text-stone-500">${l.reason} (${l.user_name}) - ${l.created_at}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-extrabold ${isPositive ? 'text-emerald-600' : 'text-orange-600'}">
+                                    ${isPositive ? '+' : ''}${l.change_qty} ${l.unit}
+                                </span>
+                                <span class="text-[10px] text-stone-400 block">Còn: ${l.new_balance}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Render recent quotes
+                const quotesList = document.getElementById('recent-quotes-list');
+                quotesList.innerHTML = '';
+                data.recent_quotes.forEach(q => {
+                    const isInvoiced = q.status === 'approved_invoiced';
+                    quotesList.innerHTML += `
+                        <div class="p-2.5 rounded-lg border border-stone-100 flex items-center justify-between">
+                            <div>
+                                <span class="font-mono font-bold text-earth-800">${q.quote_code}</span>
+                                <p class="font-semibold text-stone-800">${q.customer_name} (${q.quote_type === 'project' ? 'Dự Án' : 'Bán Lẻ'})</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold text-fire-600">${formatVND(q.total_amount)}</span>
+                                <span class="text-[10px] block ${isInvoiced ? 'text-emerald-600 font-bold' : 'text-amber-600'}">
+                                    ${isInvoiced ? '✅ Đã trừ kho' : '⏳ Bản nháp'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // 2. INVENTORY & PRODUCTS LOGIC
+        async function loadProducts() {
+            const search = document.getElementById('prod-search').value;
+            const category = document.getElementById('prod-cat-filter').value;
+            try {
+                const res = await fetch(`/api/products?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`);
+                allProducts = await res.json();
+
+                const tbody = document.getElementById('products-table-tbody');
+                tbody.innerHTML = '';
+
+                allProducts.forEach(p => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-stone-50/80 transition">
+                            <td class="py-3 px-4 font-mono font-bold text-earth-800">${p.code}</td>
+                            <td class="py-3 px-4 font-semibold text-stone-900">${p.name}</td>
+                            <td class="py-3 px-4 text-stone-600"><span class="px-2 py-0.5 rounded-md bg-stone-100 text-[11px]">${p.category}</span></td>
+                            <td class="py-3 px-4 text-stone-600">${p.unit}</td>
+                            <td class="py-3 px-4 text-right font-medium text-stone-600">${formatVND(p.cost_price)}</td>
+                            <td class="py-3 px-4 text-right font-bold text-earth-800">${formatVND(p.retail_price)} <span class="text-[10px] text-stone-400 font-normal">(+${p.retail_markup_pct}%)</span></td>
+                            <td class="py-3 px-4 text-right font-bold text-fire-600">${formatVND(p.project_price)} <span class="text-[10px] text-stone-400 font-normal">(+${p.project_markup_pct}%)</span></td>
+                            <td class="py-3 px-4 text-center">
+                                <span class="font-bold ${p.is_low_stock ? 'text-red-600 bg-red-100 px-2 py-0.5 rounded-full' : 'text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full'}">
+                                    ${p.stock_qty}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-center text-stone-400">${p.min_alert_qty}</td>
+                            <td class="py-3 px-4 text-center space-x-1.5">
+                                <button onclick="openStockModal(${p.id}, '${p.name}')" title="Nhập/Điều chỉnh kho" class="p-1.5 text-earth-700 hover:bg-earth-100 rounded-lg">
+                                    <i data-lucide="package-plus" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="openEditProduct(${p.id})" title="Chỉnh sửa" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteProduct(${p.id})" title="Xóa" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                updateIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function openProductModal() {
+            document.getElementById('prod-form-id').value = '';
+            document.getElementById('product-modal-title').textContent = 'Thêm Mới Linh Kiện Vật Tư';
+            document.getElementById('product-form').reset();
+            calcPreviewPrices();
+            document.getElementById('product-modal').classList.remove('hidden');
+            updateIcons();
+        }
+
+        function openEditProduct(id) {
+            const prod = allProducts.find(p => p.id === id);
+            if (!prod) return;
+
+            document.getElementById('prod-form-id').value = prod.id;
+            document.getElementById('product-modal-title').textContent = 'Chỉnh Sửa Linh Kiện: ' + prod.name;
+            document.getElementById('prod-form-code').value = prod.code;
+            document.getElementById('prod-form-category').value = prod.category;
+            document.getElementById('prod-form-name').value = prod.name;
+            document.getElementById('prod-form-unit').value = prod.unit;
+            document.getElementById('prod-form-supplier').value = prod.supplier || '';
+            document.getElementById('prod-form-cost').value = prod.cost_price;
+            document.getElementById('prod-form-retail-markup').value = prod.retail_markup_pct;
+            document.getElementById('prod-form-project-markup').value = prod.project_markup_pct;
+            document.getElementById('prod-form-stock').value = prod.stock_qty;
+            document.getElementById('prod-form-min-alert').value = prod.min_alert_qty;
+            document.getElementById('prod-form-notes').value = prod.notes || '';
+
+            calcPreviewPrices();
+            document.getElementById('product-modal').classList.remove('hidden');
+            updateIcons();
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        function calcPreviewPrices() {
+            const cost = parseFloat(document.getElementById('prod-form-cost').value) || 0;
+            const retailMarkup = parseFloat(document.getElementById('prod-form-retail-markup').value) || 0;
+            const projMarkup = parseFloat(document.getElementById('prod-form-project-markup').value) || 0;
+
+            const retailPrice = cost * (1 + retailMarkup / 100);
+            const projPrice = cost * (1 + projMarkup / 100);
+
+            document.getElementById('preview-retail-price').textContent = formatVND(retailPrice);
+            document.getElementById('preview-project-price').textContent = formatVND(projPrice);
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-form-id').value;
+            const payload = {
+                code: document.getElementById('prod-form-code').value.trim(),
+                name: document.getElementById('prod-form-name').value.trim(),
+                category: document.getElementById('prod-form-category').value,
+                unit: document.getElementById('prod-form-unit').value.trim(),
+                supplier: document.getElementById('prod-form-supplier').value.trim(),
+                cost_price: parseFloat(document.getElementById('prod-form-cost').value),
+                retail_markup_pct: parseFloat(document.getElementById('prod-form-retail-markup').value),
+                project_markup_pct: parseFloat(document.getElementById('prod-form-project-markup').value),
+                stock_qty: parseFloat(document.getElementById('prod-form-stock').value),
+                min_alert_qty: parseFloat(document.getElementById('prod-form-min-alert').value),
+                notes: document.getElementById('prod-form-notes').value.trim()
+            };
+
+            const url = id ? `/api/products/${id}` : '/api/products';
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                closeProductModal();
+                loadProducts();
+                loadDashboard();
+            } else {
+                const err = await res.json();
+                alert(err.detail || 'Có lỗi xảy ra');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa linh kiện này khỏi hệ thống?')) return;
+            await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            loadProducts();
+            loadDashboard();
+        }
+
+        // Adjust Stock Modal
+        function openStockModal(pid, name) {
+            document.getElementById('stock-adjust-pid').value = pid;
+            document.getElementById('stock-modal-prod-name').textContent = name;
+            document.getElementById('stock-adjust-qty').value = '';
+            document.getElementById('stock-adjust-reason').value = '';
+            document.getElementById('stock-modal').classList.remove('hidden');
+        }
+
+        function closeStockModal() {
+            document.getElementById('stock-modal').classList.add('hidden');
+        }
+
+        async function saveStockAdjust(e) {
+            e.preventDefault();
+            const pid = parseInt(document.getElementById('stock-adjust-pid').value);
+            const qty = parseFloat(document.getElementById('stock-adjust-qty').value);
+            const reason = document.getElementById('stock-adjust-reason').value;
+
+            const res = await fetch('/api/products/adjust_stock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: pid, change_qty: qty, reason: reason, user_name: currentUser.full_name })
+            });
+
+            if (res.ok) {
+                closeStockModal();
+                loadProducts();
+                loadDashboard();
+            }
+        }
+
+        // 3. QUOTE CREATION & CALCULATION LOGIC
+        function openNewQuoteModal() {
+            document.getElementById('quote-form').reset();
+            document.getElementById('quote-items-tbody').innerHTML = '';
+            addQuoteItemRow(); // Add 1 empty row by default
+            toggleQuoteTypeFields();
+            calcQuoteTotals();
+            document.getElementById('quote-modal').classList.remove('hidden');
+            updateIcons();
+        }
+
+        function closeQuoteModal() {
+            document.getElementById('quote-modal').classList.add('hidden');
+        }
+
+        function toggleQuoteTypeFields() {
+            const qType = document.getElementById('quote-type-select').value;
+            const extraFields = document.getElementById('project-extra-fields');
+            const summaryExtra = document.getElementById('summary-extra-container');
+
+            if (qType === 'retail') {
+                extraFields.classList.add('hidden');
+                summaryExtra.classList.add('hidden');
+                document.getElementById('quote-labor-cost').value = 0;
+                document.getElementById('quote-transport-cost').value = 0;
+                document.getElementById('quote-other-cost').value = 0;
+            } else {
+                extraFields.classList.remove('hidden');
+                summaryExtra.classList.remove('hidden');
+            }
+
+            // Recalculate item unit prices based on quote type
+            const rows = document.querySelectorAll('#quote-items-tbody tr');
+            rows.forEach(r => {
+                const select = r.querySelector('.item-select');
+                if (select && select.value) {
+                    onQuoteProductSelected(select);
+                }
+            });
+            calcQuoteTotals();
+        }
+
+        function addQuoteItemRow() {
+            const tbody = document.getElementById('quote-items-tbody');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-stone-50 transition border-b border-stone-100";
+
+            let optionsHtml = '<option value="">-- Chọn linh kiện từ kho --</option>';
+            allProducts.forEach(p => {
+                optionsHtml += `<option value="${p.id}" data-cost="${p.cost_price}" data-retail="${p.retail_price}" data-proj="${p.project_price}" data-unit="${p.unit}" data-name="${p.name}" data-code="${p.code}" data-cat="${p.category}">${p.code} - ${p.name} (Tồn: ${p.stock_qty} ${p.unit})</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="py-2 px-3">
+                    <select class="item-select w-full p-1.5 rounded-lg border border-stone-200 text-xs bg-white" onchange="onQuoteProductSelected(this)">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td class="py-2 px-3">
+                    <input type="text" class="item-name w-full p-1.5 rounded-lg border border-stone-200 text-xs" placeholder="Tên sản phẩm">
+                </td>
+                <td class="py-2 px-3">
+                    <input type="text" class="item-unit w-full p-1.5 rounded-lg border border-stone-200 text-xs text-center" placeholder="ĐVT">
+                </td>
+                <td class="py-2 px-3">
+                    <input type="number" class="item-qty w-full p-1.5 rounded-lg border border-stone-200 text-xs text-center font-bold" value="1" min="0.1" step="any" oninput="calcQuoteTotals()">
+                </td>
+                <td class="py-2 px-3">
+                    <input type="number" class="item-price w-full p-1.5 rounded-lg border border-stone-200 text-xs text-right font-semibold" value="0" oninput="calcQuoteTotals()">
+                </td>
+                <td class="py-2 px-3 text-right font-bold text-earth-900 item-total">0 đ</td>
+                <td class="py-2 px-3 text-center">
+                    <button type="button" onclick="this.closest('tr').remove(); calcQuoteTotals();" class="text-stone-400 hover:text-red-500">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            updateIcons();
+        }
+
+        function onQuoteProductSelected(selectEl) {
+            const tr = selectEl.closest('tr');
+            const selectedOpt = selectEl.options[selectEl.selectedIndex];
+            if (!selectedOpt.value) return;
+
+            const qType = document.getElementById('quote-type-select').value;
+            const name = selectedOpt.getAttribute('data-name');
+            const unit = selectedOpt.getAttribute('data-unit');
+            const retailPrice = parseFloat(selectedOpt.getAttribute('data-retail')) || 0;
+            const projPrice = parseFloat(selectedOpt.getAttribute('data-proj')) || 0;
+
+            tr.querySelector('.item-name').value = name;
+            tr.querySelector('.item-unit').value = unit;
+            tr.querySelector('.item-price').value = qType === 'retail' ? retailPrice : projPrice;
+
+            calcQuoteTotals();
+        }
+
+        function calcQuoteTotals() {
+            let itemsSubtotal = 0;
+            const rows = document.querySelectorAll('#quote-items-tbody tr');
+
+            rows.forEach(r => {
+                const qty = parseFloat(r.querySelector('.item-qty')?.value) || 0;
+                const price = parseFloat(r.querySelector('.item-price')?.value) || 0;
+                const total = qty * price;
+                if (r.querySelector('.item-total')) {
+                    r.querySelector('.item-total').textContent = formatVND(total);
+                }
+                itemsSubtotal += total;
+            });
+
+            const labor = parseFloat(document.getElementById('quote-labor-cost')?.value) || 0;
+            const transport = parseFloat(document.getElementById('quote-transport-cost')?.value) || 0;
+            const other = parseFloat(document.getElementById('quote-other-cost')?.value) || 0;
+
+            const extraTotal = labor + transport + other;
+            const grandTotal = itemsSubtotal + extraTotal;
+
+            if (document.getElementById('summary-items-subtotal')) {
+                document.getElementById('summary-items-subtotal').textContent = formatVND(itemsSubtotal);
+                document.getElementById('summary-extra-total').textContent = formatVND(extraTotal);
+                document.getElementById('summary-grand-total').textContent = formatVND(grandTotal);
+            }
+        }
+
+        async function saveQuote(e) {
+            e.preventDefault();
+            const items = [];
+            const rows = document.querySelectorAll('#quote-items-tbody tr');
+
+            rows.forEach(r => {
+                const select = r.querySelector('.item-select');
+                const pId = select?.value ? parseInt(select.value) : null;
+                const name = r.querySelector('.item-name')?.value;
+                const unit = r.querySelector('.item-unit')?.value;
+                const qty = parseFloat(r.querySelector('.item-qty')?.value) || 0;
+                const price = parseFloat(r.querySelector('.item-price')?.value) || 0;
+
+                if (name && qty > 0) {
+                    items.push({
+                        product_id: pId,
+                        item_name: name,
+                        unit: unit,
+                        quantity: qty,
+                        unit_price: price,
+                        total_price: qty * price
+                    });
+                }
+            });
+
+            if (items.length === 0) {
+                alert('Vui lòng thêm ít nhất 1 linh kiện trong bảng báo giá!');
+                return;
+            }
+
+            const payload = {
+                quote_type: document.getElementById('quote-type-select').value,
+                customer_name: document.getElementById('quote-cust-name').value.trim(),
+                customer_phone: document.getElementById('quote-cust-phone').value.trim(),
+                customer_address: document.getElementById('quote-cust-address').value.trim(),
+                created_by_name: currentUser.full_name,
+                labor_cost: parseFloat(document.getElementById('quote-labor-cost').value) || 0,
+                transport_cost: parseFloat(document.getElementById('quote-transport-cost').value) || 0,
+                other_cost: parseFloat(document.getElementById('quote-other-cost').value) || 0,
+                other_cost_note: document.getElementById('quote-other-cost-note').value.trim(),
+                notes: document.getElementById('quote-notes').value.trim(),
+                items: items
+            };
+
+            const res = await fetch('/api/quotes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                closeQuoteModal();
+                loadQuotes();
+                loadDashboard();
+                openA4Preview(data.quote_id);
+            }
+        }
+
+        // 4. QUOTES LIST & A4 PRINT PREVIEW
+        async function loadQuotes() {
+            const status = document.getElementById('quote-status-filter')?.value || 'all';
+            try {
+                const res = await fetch(`/api/quotes?status=${status}`);
+                const quotes = await res.json();
+
+                const tbody = document.getElementById('quotes-table-tbody');
+                tbody.innerHTML = '';
+
+                quotes.forEach(q => {
+                    const isInvoiced = q.status === 'approved_invoiced';
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-stone-50 transition">
+                            <td class="py-3 px-4 font-mono font-bold text-earth-800">${q.quote_code}</td>
+                            <td class="py-3 px-4 font-medium"><span class="px-2 py-0.5 rounded ${q.quote_type === 'project' ? 'bg-amber-100 text-amber-900' : 'bg-stone-100 text-stone-700'}">${q.quote_type === 'project' ? 'Dự Án' : 'Bán Lẻ'}</span></td>
+                            <td class="py-3 px-4 font-bold text-stone-900">${q.customer_name}</td>
+                            <td class="py-3 px-4 text-stone-600">${q.customer_phone}</td>
+                            <td class="py-3 px-4 text-right font-extrabold text-fire-600">${formatVND(q.total_amount)}</td>
+                            <td class="py-3 px-4 text-center">
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${isInvoiced ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                    ${isInvoiced ? 'Đã Chốt & Xuất HĐ' : 'Bản Nháp Chờ Chốt'}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                ${q.is_deducted ? '<span class="text-emerald-600 font-bold">✅ Đã Trừ</span>' : '<span class="text-stone-400">Chưa trừ</span>'}
+                            </td>
+                            <td class="py-3 px-4 text-stone-500">${q.created_at}</td>
+                            <td class="py-3 px-4 text-center space-x-2">
+                                <button onclick="openA4Preview(${q.id})" class="px-3 py-1.5 bg-earth-700 hover:bg-earth-800 text-white rounded-lg font-bold text-[11px] shadow-sm">
+                                    Xem Phiếu A4
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                updateIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function openA4Preview(quoteId) {
+            try {
+                const res = await fetch(`/api/quotes/${quoteId}`);
+                currentQuoteDetail = await res.json();
+
+                const q = currentQuoteDetail;
+                const isInvoiced = q.status === 'approved_invoiced';
+
+                // Fill header and info
+                document.getElementById('preview-modal-code').textContent = q.quote_code;
+                document.getElementById('print-quote-code').textContent = q.quote_code;
+                document.getElementById('print-doc-badge').textContent = isInvoiced ? 'HÓA ĐƠN BÁN HÀNG' : 'BẢNG BÁO GIÁ';
+                document.getElementById('preview-modal-badge').textContent = isInvoiced ? 'HÓA ĐƠN BÁN HÀNG' : 'BẢNG BÁO GIÁ';
+
+                const btnApprove = document.getElementById('btn-approve-invoice');
+                if (isInvoiced) {
+                    btnApprove.classList.add('hidden');
+                } else {
+                    btnApprove.classList.remove('hidden');
+                }
+
+                // Company settings
+                const s = q.company_settings || {};
+                document.getElementById('print-company-name').textContent = s.company_name || 'CÔNG TY TNHH NGUYÊN NÔNG GROUP';
+                document.getElementById('print-slogan').textContent = s.slogan || 'Giải Pháp Nông Nghiệp Bền Vững';
+                document.getElementById('print-hotline').textContent = s.hotline || '0988 123 456';
+                document.getElementById('print-email').textContent = s.email || 'contact@nguyennong.vn';
+                document.getElementById('print-address').textContent = s.address || 'Khu Nông Nghiệp Công Nghệ Cao';
+                document.getElementById('print-bank-info').textContent = s.bank_info || 'STK Techcombank';
+
+                // Customer info
+                document.getElementById('print-cust-name').textContent = q.customer_name;
+                document.getElementById('print-cust-phone').textContent = q.customer_phone;
+                document.getElementById('print-cust-address').textContent = q.customer_address || 'Theo yêu cầu';
+                document.getElementById('print-creator-name').textContent = q.created_by_name || 'Minh Hiếu';
+                document.getElementById('print-created-date').textContent = 'Ngày: ' + q.created_at;
+                document.getElementById('print-notes').textContent = q.notes || 'Báo giá có giá trị trong 15 ngày kể từ ngày xuất.';
+
+                // Render items
+                const tbody = document.getElementById('print-items-tbody');
+                tbody.innerHTML = '';
+                q.items.forEach((it, idx) => {
+                    tbody.innerHTML += `
+                        <tr class="border-b border-stone-200">
+                            <td class="p-2 border border-stone-300 text-center">${idx + 1}</td>
+                            <td class="p-2 border border-stone-300 font-semibold text-stone-900">${it.item_name}</td>
+                            <td class="p-2 border border-stone-300 text-center">${it.unit}</td>
+                            <td class="p-2 border border-stone-300 text-center font-bold">${it.quantity}</td>
+                            <td class="p-2 border border-stone-300 text-right">${formatVND(it.unit_price)}</td>
+                            <td class="p-2 border border-stone-300 text-right font-bold text-stone-900">${formatVND(it.total_price)}</td>
+                        </tr>
+                    `;
+                });
+
+                // Render project extra items if any
+                const extraTbody = document.getElementById('print-extra-tbody');
+                extraTbody.innerHTML = '';
+                let extraIdx = q.items.length + 1;
+                if (q.labor_cost > 0) {
+                    extraTbody.innerHTML += `
+                        <tr class="border-b border-stone-200 bg-amber-50/40">
+                            <td class="p-2 border border-stone-300 text-center">${extraIdx++}</td>
+                            <td class="p-2 border border-stone-300 font-semibold">Công thợ thi công & lắp đặt hoàn thiện</td>
+                            <td class="p-2 border border-stone-300 text-center">Gói</td>
+                            <td class="p-2 border border-stone-300 text-center font-bold">1</td>
+                            <td class="p-2 border border-stone-300 text-right">${formatVND(q.labor_cost)}</td>
+                            <td class="p-2 border border-stone-300 text-right font-bold">${formatVND(q.labor_cost)}</td>
+                        </tr>
+                    `;
+                }
+                if (q.transport_cost > 0) {
+                    extraTbody.innerHTML += `
+                        <tr class="border-b border-stone-200 bg-amber-50/40">
+                            <td class="p-2 border border-stone-300 text-center">${extraIdx++}</td>
+                            <td class="p-2 border border-stone-300 font-semibold">Cước vận chuyển thiết bị đến chân công trình</td>
+                            <td class="p-2 border border-stone-300 text-center">Chuyến</td>
+                            <td class="p-2 border border-stone-300 text-center font-bold">1</td>
+                            <td class="p-2 border border-stone-300 text-right">${formatVND(q.transport_cost)}</td>
+                            <td class="p-2 border border-stone-300 text-right font-bold">${formatVND(q.transport_cost)}</td>
+                        </tr>
+                    `;
+                }
+                if (q.other_cost > 0) {
+                    extraTbody.innerHTML += `
+                        <tr class="border-b border-stone-200 bg-amber-50/40">
+                            <td class="p-2 border border-stone-300 text-center">${extraIdx++}</td>
+                            <td class="p-2 border border-stone-300 font-semibold">${q.other_cost_note || 'Chi phí phụ trợ'}</td>
+                            <td class="p-2 border border-stone-300 text-center">Gói</td>
+                            <td class="p-2 border border-stone-300 text-center font-bold">1</td>
+                            <td class="p-2 border border-stone-300 text-right">${formatVND(q.other_cost)}</td>
+                            <td class="p-2 border border-stone-300 text-right font-bold">${formatVND(q.other_cost)}</td>
+                        </tr>
+                    `;
+                }
+
+                document.getElementById('print-grand-total').textContent = formatVND(q.total_amount);
+                document.getElementById('a4-modal').classList.remove('hidden');
+                updateIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function closeA4Modal() {
+            document.getElementById('a4-modal').classList.add('hidden');
+        }
+
+        // CRITICAL: Customer approves -> convert to invoice & deduct stock
+        async function approveAndDeductStock() {
+            if (!currentQuoteDetail) return;
+            if (!confirm(`XÁC NHẬN: Khách hàng đã duyệt đơn và thanh toán cho phiếu ${currentQuoteDetail.quote_code}?\n\nHệ thống sẽ chính thức chuyển sang HÓA ĐƠN và TỰ ĐỘNG TRỪ KHO các linh kiện tương ứng!`)) {
+                return;
+            }
+
+            const res = await fetch(`/api/quotes/${currentQuoteDetail.id}/approve_and_invoice?user_name=${encodeURIComponent(currentUser.full_name)}`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                let alertMsg = data.message;
+                if (data.low_stock_alerts && data.low_stock_alerts.length > 0) {
+                    alertMsg += '\n\n⚠️ CẢNH BÁO TỒN KHO: Có ' + data.low_stock_alerts.length + ' linh kiện đã chạm ngưỡng tối thiểu và email cảnh báo đã được gửi!';
+                }
+                alert(alertMsg);
+                openA4Preview(currentQuoteDetail.id);
+                loadQuotes();
+                loadProducts();
+                loadDashboard();
+            }
+        }
+
+        // 5. CUSTOMERS DATABASE
+        async function loadCustomers() {
+            try {
+                const res = await fetch('/api/customers');
+                const customers = await res.json();
+
+                const tbody = document.getElementById('customers-table-tbody');
+                tbody.innerHTML = '';
+
+                customers.forEach((c, idx) => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-stone-50 transition">
+                            <td class="py-3 px-4 text-stone-400 font-mono">${idx + 1}</td>
+                            <td class="py-3 px-4 font-bold text-stone-900">${c.name}</td>
+                            <td class="py-3 px-4 font-mono font-semibold text-earth-800">${c.phone || '-'}</td>
+                            <td class="py-3 px-4 text-stone-600">${c.address || '-'}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[11px] ${c.customer_type === 'project' ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700'}">${c.customer_type === 'project' ? 'Khách Dự Án' : 'Khách Bán Lẻ'}</span></td>
+                            <td class="py-3 px-4 text-stone-500">${c.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
+                updateIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // 6. SETTINGS & TEAM MANAGEMENT
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const s = await res.json();
+
+                document.getElementById('set-company-name').value = s.company_name || '';
+                document.getElementById('set-slogan').value = s.slogan || '';
+                document.getElementById('set-hotline').value = s.hotline || '';
+                document.getElementById('set-alert-email').value = s.alert_email_receiver || '';
+                document.getElementById('set-address').value = s.address || '';
+                document.getElementById('set-bank-info').value = s.bank_info || '';
+
+                // Load users
+                const uRes = await fetch('/api/users');
+                const users = await uRes.json();
+                const uList = document.getElementById('users-list-container');
+                uList.innerHTML = '';
+
+                const roleBadges = {
+                    'admin': '<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">Toàn Quyền Admin</span>',
+                    'tech': '<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px]">Kỹ Thuật Dự Án</span>',
+                    'sales': '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Kinh Doanh & Bán Lẻ</span>'
+                };
+
+                users.forEach(u => {
+                    uList.innerHTML += `
+                        <div class="p-3 rounded-xl border border-stone-200 bg-stone-50 flex items-center justify-between">
+                            <div>
+                                <span class="font-bold text-stone-900">${u.full_name}</span>
+                                <span class="text-xs text-stone-400 block font-mono">user: ${u.username} • ${u.email}</span>
+                            </div>
+                            <div>${roleBadges[u.role] || u.role}</div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function saveCompanySettings(e) {
+            e.preventDefault();
+            const payload = {
+                company_name: document.getElementById('set-company-name').value,
+                slogan: document.getElementById('set-slogan').value,
+                hotline: document.getElementById('set-hotline').value,
+                alert_email_receiver: document.getElementById('set-alert-email').value,
+                address: document.getElementById('set-address').value,
+                bank_info: document.getElementById('set-bank-info').value
+            };
+
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Đã cập nhật thông tin công ty thành công!');
+            }
+        }
+    </script>
+</body>
+</html>

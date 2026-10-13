@@ -40,8 +40,8 @@ def check_and_alert_low_stock(product_id: int):
         print(f"⚠️ [CẢNH BÁO TỒN KHO THẤP] Linh kiện: {prod['name']} ({prod['code']}) còn {prod['stock_qty']} {prod['unit']} -> Gửi tới: {receivers}")
     conn.close()
 
-# ----------------- TẠO LINK XEM TỬ TẠM THỜI (HẾT HẠN 18H 13/10/2026) ----------------- #
-DEMO_EXPIRATION = datetime(2026, 10, 13, 18, 0, 0)
+# ----------------- TẠO LINK XEM TỬ TẠM THỜI (ĐÃ KHÓA NGAY LẬP TỨC) ----------------- #
+DEMO_EXPIRATION = datetime(2026, 10, 1, 0, 0, 0) # Đặt về quá khứ -> Khóa ngay lập tức 100%
 
 @app.get("/demo")
 def demo_access():

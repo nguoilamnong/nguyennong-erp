@@ -61,17 +61,27 @@ def demo_access():
     with open(template_file, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Tự động bỏ qua màn hình đăng nhập và gán phiên xem thử khách VIP
+    # Tự động gán quyền Khách Trải Nghiệm và ẩn hoàn toàn khung đăng nhập
     guest_script = """
     <script>
-        localStorage.setItem('nng_user', JSON.stringify({
+        const guestUser = {
             id: 999,
             username: 'khach_trai_nghiem',
             full_name: 'Khách Trải Nghiệm (Hết Hạn 18h)',
             role: 'admin',
             email: 'demo@nguyennong.vn'
-        }));
+        };
+        localStorage.setItem('nng_user', JSON.stringify(guestUser));
+        window.currentUser = guestUser;
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('login-modal');
+            if (modal) modal.style.display = 'none';
+            if (typeof applyUserSession === 'function') applyUserSession();
+        });
     </script>
+    <style>
+        #login-modal { display: none !important; }
+    </style>
     """
     html = html.replace("</head>", f"{guest_script}</head>")
     return HTMLResponse(content=html)

@@ -60,8 +60,7 @@ def demo_access():
     template_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
     with open(template_file, "r", encoding="utf-8") as f:
         html = f.read()
-
-    # Cấu hình quyền CHỈ XEM (VIEW ONLY): Khóa chặt từ Giao diện đến Hệ thống
+    # Cấu hình quyền CHỈ XEM (VIEW ONLY): Giữ nguyên mọi danh mục, khóa cứng không cho sửa/xóa
     guest_script = """
     <script>
         const guestUser = {
@@ -88,24 +87,15 @@ def demo_access():
         window.saveCompanySettings = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin công ty!'); return false; };
         window.saveUserEdit = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin thành viên!'); return false; };
 
-        // Chặn switchTab sang Settings
-        const originalSwitchTab = window.switchTab;
-        window.switchTab = function(tab) {
-            if (tab === 'settings') {
-                alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền truy cập mục Cài Đặt!');
-                return;
-            }
-            if (typeof originalSwitchTab === 'function') originalSwitchTab(tab);
-        };
+        function enforceViewOnly() {
+            // Đảm bảo toàn bộ 5 mục menu điều hướng luôn hiển thị rõ ràng
+            document.querySelectorAll('nav button, #nav-dashboard, #nav-inventory, #nav-quotes, #nav-customers, #nav-settings').forEach(btn => {
+                btn.style.display = 'flex';
+                btn.style.visibility = 'visible';
+                btn.style.pointerEvents = 'auto';
+            });
 
-        function lockInputsAndHideSettings() {
-            // 1. Ẩn hoàn toàn menu và tab Cài Đặt khỏi giao diện khách
-            const navSettings = document.getElementById('nav-settings');
-            if (navSettings) navSettings.remove();
-            const tabSettings = document.getElementById('tab-settings');
-            if (tabSettings) tabSettings.remove();
-
-            // 2. Khóa cứng toàn bộ ô input, textarea, select (trừ ô tìm kiếm sản phẩm và bộ lọc danh mục)
+            // Khóa cứng tất cả các ô nhập liệu (Hotline, tên công ty, ghi chú...) không cho gõ phím hoặc xóa
             document.querySelectorAll('input, textarea, select').forEach(el => {
                 if (el.id === 'search-product' || el.id === 'filter-category' || el.type === 'search') return;
                 el.readOnly = true;
@@ -116,20 +106,24 @@ def demo_access():
                 el.style.userSelect = 'none';
             });
 
-            // 3. Ẩn tất cả nút Thêm, Sửa, Xóa, Lưu, Duyệt trên toàn giao diện
-            document.querySelectorAll('button').forEach(btn => {
-                const txt = (btn.innerText || '').trim();
-                const oc = btn.getAttribute('onclick') || '';
-                if (
-                    oc.includes('delete') || oc.includes('Edit') || oc.includes('Modal') || 
-                    oc.includes('save') || oc.includes('approve') || btn.type === 'submit' ||
-                    txt.includes('Thêm') || txt.includes('Xóa') || txt.includes('Sửa') || 
-                    txt.includes('Lưu') || txt.includes('Duyệt') || txt.includes('Nhập kho')
-                ) {
-                    btn.style.display = 'none';
-                    btn.style.visibility = 'hidden';
-                    btn.style.pointerEvents = 'none';
-                }
+            // Ẩn triệt để chỉ các nút chức năng Thêm, Sửa, Xóa, Lưu (không ảnh hưởng đến thanh menu)
+            const hideSelectors = [
+                'button[onclick*="deleteProduct"]',
+                'button[onclick*="openEditProduct"]',
+                'button[onclick*="openProductModal"]',
+                'button[onclick*="openStockModal"]',
+                'button[onclick*="openNewQuoteModal"]',
+                'button[onclick*="openUserEditModal"]',
+                'button[onclick*="saveCompanySettings"]',
+                '#btn-approve-invoice',
+                '#tab-settings button[type="submit"]',
+                '#product-modal button[type="submit"]',
+                '#modal-user-edit button[type="submit"]'
+            ];
+            document.querySelectorAll(hideSelectors.join(',')).forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+                el.style.pointerEvents = 'none';
             });
         }
 
@@ -139,51 +133,66 @@ def demo_access():
             if (typeof applyUserSession === 'function') applyUserSession();
             
             // Thanh thông báo trạng thái Chỉ Xem trên đầu trang
-            const banner = document.createElement('div');
-            banner.id = 'demo-alert-banner';
-            banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 10px 16px; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 2px solid #F59E0B; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.08);';
-            banner.innerHTML = '🔒 BẠN ĐANG TRUY CẬP VỚI QUYỀN CHỈ XEM (VIEW ONLY) • TOÀN BỘ NÚT SỬA/XÓA ĐÃ BỊ KHÓA • LINK TỰ HỦY LÚC 11:15';
-            document.body.prepend(banner);
+            if (!document.getElementById('demo-alert-banner')) {
+                const banner = document.createElement('div');
+                banner.id = 'demo-alert-banner';
+                banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 10px 16px; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 2px solid #F59E0B; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.08);';
+                banner.innerHTML = '🔒 BẠN ĐANG TRUY CẬP VỚI QUYỀN CHỈ XEM (VIEW ONLY) • TOÀN BỘ NÚT SỬA/XÓA ĐÃ BỊ KHÓA • LINK TỰ HỦY LÚC 11:15';
+                document.body.prepend(banner);
+            }
 
-            lockInputsAndHideSettings();
+            enforceViewOnly();
         });
 
-        window.addEventListener('load', lockInputsAndHideSettings);
-        setInterval(lockInputsAndHideSettings, 200);
+        window.addEventListener('load', enforceViewOnly);
+        setInterval(enforceViewOnly, 300);
     </script>
     <style>
-        #login-modal, #nav-settings, #tab-settings { 
+        #login-modal { 
             display: none !important; 
-            visibility: hidden !important;
         }
 
-        /* Ẩn triệt để tất cả các nút Thêm, Sửa, Xóa, Nhập kho trên toàn bộ giao diện */
-        button[onclick*="delete"],
-        button[onclick*="Edit"],
-        button[onclick*="Modal"],
-        button[onclick*="save"],
-        button[onclick*="approve"],
-        button[onclick*="adjust"],
-        button[type="submit"],
+        /* Đảm bảo toàn bộ thanh menu bên trái luôn hiển thị đầy đủ */
+        nav button, 
+        #nav-dashboard, 
+        #nav-inventory, 
+        #nav-quotes, 
+        #nav-customers, 
+        #nav-settings {
+            display: flex !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+
+        /* Ẩn triệt để tất cả các nút Thao Tác Thêm, Sửa, Xóa, Lưu */
+        button[onclick*="deleteProduct"],
+        button[onclick*="openEditProduct"],
+        button[onclick*="openProductModal"],
+        button[onclick*="openStockModal"],
+        button[onclick*="openNewQuoteModal"],
+        button[onclick*="openUserEditModal"],
+        button[onclick*="saveCompanySettings"],
         #btn-approve-invoice,
         header button[onclick*="openNewQuoteModal"],
         #tab-inventory button[onclick*="openProductModal"],
         #tab-quotes button[onclick*="openNewQuoteModal"],
-        #tab-settings button[type="submit"] {
+        #tab-settings button[type="submit"],
+        #product-modal button[type="submit"],
+        #modal-user-edit button[type="submit"] {
             display: none !important;
             visibility: hidden !important;
             pointer-events: none !important;
         }
 
-        /* Khóa cứng toàn bộ input/textarea/select để không ai có thể bấm vào xóa hay gõ phím */
+        /* Khóa cứng toàn bộ input/textarea/select để KHÔNG THỂ BẤM VÀO XÓA (kể cả Hotline) */
         input:not(#search-product):not(#filter-category):not([type="search"]),
         textarea,
         select:not(#filter-category) {
             pointer-events: none !important;
             user-select: none !important;
             -webkit-user-select: none !important;
-            background-color: #f1f5f9 !important;
-            color: #64748b !important;
+            background-color: #f8fafc !important;
+            color: #334155 !important;
             cursor: not-allowed !important;
         }
     </style>

@@ -296,10 +296,16 @@ def run_apify_scan():
 
 # ----------------- TELEGRAM INTERACTION ----------------- #
 def handle_user_query(user_msg, sender_name="sếp"):
+    # Format sender title: ALWAYS call everyone 'sếp + [Tên]'
+    if not sender_name.lower().startswith("sếp"):
+        sender_title = f"sếp {sender_name}"
+    else:
+        sender_title = sender_name
+
     lower = user_msg.lower()
     if any(k in lower for k in ["group nào", "nhóm nào", "mấy group", "danh sách group", "nguồn nào"]):
         groups = get_tracked_groups()
-        reply = f"Báo cáo {sender_name}, hiện tại bot đang theo dõi CHÍNH XÁC {len(groups)} group Facebook sau:\n\n"
+        reply = f"Báo cáo {sender_title}, hiện tại bot đang theo dõi CHÍNH XÁC {len(groups)} group Facebook sau:\n\n"
         for idx, g in enumerate(groups, 1):
             reply += f"{idx}. <b>{g[1]}</b>\n🔗 <a href='{g[2]}'>{g[2]}</a>\n\n"
         reply += "Mọi bài cào về đều lấy từ đúng 6 group này, không có group nào khác."
@@ -310,7 +316,7 @@ def handle_user_query(user_msg, sender_name="sếp"):
 
     prompt = f"""
 Bạn là Trợ lý Dữ liệu của Nguyên Nông Group (NNG).
-Người hỏi: {sender_name}
+Người hỏi: {sender_title}
 Câu hỏi: "{user_msg}"
 
 ĐỊNH VỊ DỊCH VỤ CỦA NGUYÊN NÔNG GROUP (NNG):
@@ -326,8 +332,9 @@ Câu hỏi: "{user_msg}"
 
 QUY TẮC BẮT BUỘC:
 1. TUYỆT ĐỐI KHÔNG DÙNG TỪ "DẠ".
-2. Trả lời dựa trên 100% SỰ THẬT trong danh sách bài viết ở trên.
-3. Nếu người dùng hỏi về một địa bàn hoặc sản phẩm:
+2. BẮT BUỘC PHẢI GỌI NGƯỜI HỎI LÀ: "{sender_title}" (Bất kỳ nhân sự nào trong group hỏi đều phải gọi là sếp + Tên của họ).
+3. Trả lời dựa trên 100% SỰ THẬT trong danh sách bài viết ở trên.
+4. Nếu người dùng hỏi về một địa bàn hoặc sản phẩm:
    - Nếu KHÔNG CÓ nhu cầu/job liên quan: Trả lời thẳng thắn là KHÔNG CÓ trong các nhóm đã cào, nêu rõ bài mới nhất trong nhóm đó đang nói về nội dung gì.
    - Nếu CÓ bài liên quan: Trích dẫn rõ tên người đăng, nội dung và kèm đường link Facebook.
 """
@@ -342,7 +349,7 @@ QUY TẮC BẮT BUỘC:
 
     # Intelligent Fallback directly from SQLite if Gemini times out
     if not posts:
-        return f"Báo cáo {sender_name}, trong kho dữ liệu hiện tại chưa có bài viết nào mới được cào về từ 6 nhóm Facebook."
+        return f"Báo cáo {sender_title}, trong kho dữ liệu hiện tại chưa có bài viết nào mới được cào về từ 6 nhóm Facebook."
     
     recent_info = f"Báo cáo {sender_name}, kiểm tra trực tiếp kho dữ liệu (hệ thống AI đang bận phản hồi chậm):\n\n"
     recent_info += f"Trong 1-2 tiếng vừa qua, 6 nhóm Facebook hiện có <b>{len(posts)} bài viết gần nhất</b>.\n"

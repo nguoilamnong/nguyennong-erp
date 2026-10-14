@@ -144,6 +144,25 @@ def create_user(u: UserCreate):
     conn.close()
     return {"success": True, "message": "Tạo tài khoản thành công"}
 
+class UserUpdate(BaseModel):
+    full_name: str
+    email: Optional[str] = ""
+    password: Optional[str] = None
+
+@app.put("/api/users/{user_id}")
+def update_user(user_id: int, u: UserUpdate):
+    conn = get_db()
+    c = conn.cursor()
+    if u.password and u.password.strip():
+        c.execute("UPDATE users SET full_name = ?, email = ?, password_hash = ? WHERE id = ?",
+                  (u.full_name, u.email, hash_pw(u.password.strip()), user_id))
+    else:
+        c.execute("UPDATE users SET full_name = ?, email = ? WHERE id = ?",
+                  (u.full_name, u.email, user_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Cập nhật thông tin thành viên thành công!"}
+
 # 2. Products & Inventory API
 @app.get("/api/products")
 def list_products(search: Optional[str] = None, category: Optional[str] = None):

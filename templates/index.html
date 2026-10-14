@@ -540,6 +540,52 @@
         </main>
     </div>
 
+    <!-- MODAL: EDIT USER -->
+    <div id="user-edit-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-md w-full p-6">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+                <h3 class="font-bold text-base text-earth-900 flex items-center space-x-2">
+                    <i data-lucide="user-check" class="w-5 h-5 text-earth-700"></i>
+                    <span>Cập Nhật Thông Tin Thành Viên</span>
+                </h3>
+                <button onclick="closeUserEditModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form id="user-edit-form" onsubmit="saveUserEdit(event)" class="mt-4 space-y-4 text-xs">
+                <input type="hidden" id="edit-user-id">
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Tên đăng nhập (Cố định)</label>
+                    <input type="text" id="edit-user-username" disabled class="w-full p-2.5 rounded-xl border border-stone-200 bg-stone-100 font-mono text-stone-500 font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Họ và tên hiển thị *</label>
+                    <input type="text" id="edit-user-fullname" required placeholder="VD: Minh Hiếu, Tùng NNG..." class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500 font-semibold">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Địa chỉ Email liên hệ / nhận cảnh báo *</label>
+                    <input type="email" id="edit-user-email" required placeholder="VD: hieu@nguyennong.vn..." class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500 font-semibold">
+                    <p class="text-[10px] text-stone-400 mt-1">Email này dùng để nhận thông báo cảnh báo kho hoặc gửi báo cáo định kỳ.</p>
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Đổi mật khẩu mới (Để trống nếu không đổi)</label>
+                    <input type="password" id="edit-user-password" placeholder="Nhập mật khẩu mới nếu muốn đổi..." class="w-full p-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-earth-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Vai trò trong hệ thống</label>
+                    <div class="p-2.5 rounded-xl border border-stone-200 bg-amber-50/50 text-earth-800 font-bold flex items-center space-x-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i>
+                        <span>Quản Trị Viên (Toàn Quyền)</span>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-stone-100 flex justify-end space-x-2">
+                    <button type="button" onclick="closeUserEditModal()" class="py-2.5 px-4 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50">Hủy</button>
+                    <button type="submit" class="py-2.5 px-5 bg-earth-700 hover:bg-earth-800 text-white font-bold rounded-xl shadow-md transition">Lưu Thay Đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: ADD / EDIT PRODUCT -->
     <div id="product-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-earth-200 max-w-xl w-full p-6 overflow-y-auto max-h-[90vh]">
@@ -1659,29 +1705,80 @@
 
                 // Load users
                 const uRes = await fetch('/api/users');
-                const users = await uRes.json();
+                window.allUsersList = await uRes.json();
                 const uList = document.getElementById('users-list-container');
                 uList.innerHTML = '';
 
-                const roleBadges = {
-                    'admin': '<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">Toàn Quyền Admin</span>',
-                    'tech': '<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px]">Kỹ Thuật Dự Án</span>',
-                    'sales': '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Kinh Doanh & Bán Lẻ</span>'
-                };
-
-                users.forEach(u => {
+                window.allUsersList.forEach(u => {
                     uList.innerHTML += `
-                        <div class="p-3 rounded-xl border border-stone-200 bg-stone-50 flex items-center justify-between">
+                        <div class="p-3 rounded-xl border border-stone-200 bg-stone-50 flex items-center justify-between hover:bg-stone-100/70 transition">
                             <div>
                                 <span class="font-bold text-stone-900">${u.full_name}</span>
-                                <span class="text-xs text-stone-400 block font-mono">user: ${u.username} • ${u.email}</span>
+                                <span class="text-xs text-stone-500 block font-mono mt-0.5">user: <strong class="text-earth-800">${u.username}</strong> • ${u.email || '<em class="text-stone-400">Chưa nhập email</em>'}</span>
                             </div>
-                            <div>${roleBadges[u.role] || u.role}</div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">Quản Trị Viên</span>
+                                <button onclick="openUserEditModal(${u.id})" class="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-earth-50 text-earth-700 font-semibold text-xs flex items-center space-x-1 shadow-xs" title="Chỉnh sửa email & thông tin">
+                                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                    <span>Sửa</span>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
+                updateIcons();
             } catch (err) {
                 console.error(err);
+            }
+        }
+
+        function openUserEditModal(userId) {
+            const user = window.allUsersList.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('edit-user-id').value = user.id;
+            document.getElementById('edit-user-username').value = user.username;
+            document.getElementById('edit-user-fullname').value = user.full_name;
+            document.getElementById('edit-user-email').value = user.email || '';
+            document.getElementById('edit-user-password').value = '';
+
+            document.getElementById('user-edit-modal').classList.remove('hidden');
+            updateIcons();
+        }
+
+        function closeUserEditModal() {
+            document.getElementById('user-edit-modal').classList.add('hidden');
+        }
+
+        async function saveUserEdit(e) {
+            e.preventDefault();
+            const userId = document.getElementById('edit-user-id').value;
+            const payload = {
+                full_name: document.getElementById('edit-user-fullname').value.trim(),
+                email: document.getElementById('edit-user-email').value.trim(),
+                password: document.getElementById('edit-user-password').value.trim() || null
+            };
+
+            const res = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Đã cập nhật thông tin thành viên thành công!');
+                closeUserEditModal();
+                loadSettings();
+                
+                // Nếu chỉnh sửa chính tài khoản đang đăng nhập, cập nhật lại avatar & session
+                if (currentUser && currentUser.id == userId) {
+                    currentUser.full_name = payload.full_name;
+                    currentUser.email = payload.email;
+                    localStorage.setItem('nng_user', JSON.stringify(currentUser));
+                    document.getElementById('user-display-name').textContent = currentUser.full_name;
+                }
+            } else {
+                alert('Có lỗi xảy ra khi cập nhật thông tin!');
             }
         }
 

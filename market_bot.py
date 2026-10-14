@@ -129,7 +129,11 @@ def send_telegram(text, reply_to_message_id=None, chat_id=None):
         if reply_to_message_id:
             payload["reply_to_message_id"] = reply_to_message_id
         try:
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10)
+            res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10).json()
+            if not res.get("ok"):
+                # If HTML parsing fails, fallback to plain text
+                payload.pop("parse_mode", None)
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10)
         except Exception as e:
             print(f"[BOT] Send telegram error: {e}")
 
@@ -310,6 +314,26 @@ def handle_user_query(user_msg, sender_name="sếp"):
             reply += f"{idx}. <b>{g[1]}</b>\n🔗 <a href='{g[2]}'>{g[2]}</a>\n\n"
         reply += "Mọi bài cào về đều lấy từ đúng 6 group này, không có group nào khác."
         return reply
+
+    # 0. Instant Link Matcher (Direct from SQLite in 0.01s, 0% timeout risk)
+    if any(k in lower for k in ["gửi link", "cho link", "link bài", "đưa link", "link đâu", "bài này", "cho xin link", "xin link"]):
+        all_posts = get_all_scraped_posts(limit=50)
+        matched = None
+        for p in all_posts:
+            author = p[1] or ""
+            content = p[2] or ""
+            if author and author.lower() in lower:
+                matched = p
+                break
+            # Match keywords from user message
+            content_words = [w for w in content.lower().split() if len(w) >= 3]
+            match_count = sum(1 for w in content_words[:20] if w in lower)
+            if match_count >= 2:
+                matched = p
+                break
+
+        if matched:
+            return f"Báo cáo {sender_title}, đây là link bài viết sếp cần tìm:\n\n👤 Tác giả: <b>{matched[1]}</b>\n🏢 Nhóm: <b>{matched[0]}</b>\n💬 Trích đoạn: <i>{matched[2][:150].strip()}...</i>\n\n🔗 <b>Link Facebook:</b> <a href='{matched[3]}'>{matched[3]}</a>"
 
     # Instant Visual Feedback: Send 'typing' status to Telegram
     try:

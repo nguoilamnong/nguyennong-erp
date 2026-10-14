@@ -75,8 +75,8 @@ def demo_access():
         window.currentUser = guestUser;
 
         // Chặn hoàn toàn tất cả các hàm sửa/xóa/nhập
-        window.deleteProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền xóa sản phẩm này!'); return false; };
-        window.openEditProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền chỉnh sửa thông tin!'); return false; };
+        window.deleteProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền xóa!'); return false; };
+        window.openEditProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền chỉnh sửa!'); return false; };
         window.openProductModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thêm mới!'); return false; };
         window.openStockModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền nhập hoặc điều chỉnh kho!'); return false; };
         window.openNewQuoteModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền tạo báo giá!'); return false; };
@@ -87,6 +87,51 @@ def demo_access():
         window.approveAndDeductStock = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền duyệt hóa đơn hoặc trừ kho!'); return false; };
         window.saveCompanySettings = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin công ty!'); return false; };
         window.saveUserEdit = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin thành viên!'); return false; };
+
+        // Chặn switchTab sang Settings
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function(tab) {
+            if (tab === 'settings') {
+                alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền truy cập mục Cài Đặt!');
+                return;
+            }
+            if (typeof originalSwitchTab === 'function') originalSwitchTab(tab);
+        };
+
+        function lockInputsAndHideSettings() {
+            // 1. Ẩn hoàn toàn menu và tab Cài Đặt khỏi giao diện khách
+            const navSettings = document.getElementById('nav-settings');
+            if (navSettings) navSettings.remove();
+            const tabSettings = document.getElementById('tab-settings');
+            if (tabSettings) tabSettings.remove();
+
+            // 2. Khóa cứng toàn bộ ô input, textarea, select (trừ ô tìm kiếm sản phẩm và bộ lọc danh mục)
+            document.querySelectorAll('input, textarea, select').forEach(el => {
+                if (el.id === 'search-product' || el.id === 'filter-category' || el.type === 'search') return;
+                el.readOnly = true;
+                el.disabled = true;
+                el.setAttribute('readonly', 'true');
+                el.setAttribute('disabled', 'true');
+                el.style.pointerEvents = 'none';
+                el.style.userSelect = 'none';
+            });
+
+            // 3. Ẩn tất cả nút Thêm, Sửa, Xóa, Lưu, Duyệt trên toàn giao diện
+            document.querySelectorAll('button').forEach(btn => {
+                const txt = (btn.innerText || '').trim();
+                const oc = btn.getAttribute('onclick') || '';
+                if (
+                    oc.includes('delete') || oc.includes('Edit') || oc.includes('Modal') || 
+                    oc.includes('save') || oc.includes('approve') || btn.type === 'submit' ||
+                    txt.includes('Thêm') || txt.includes('Xóa') || txt.includes('Sửa') || 
+                    txt.includes('Lưu') || txt.includes('Duyệt') || txt.includes('Nhập kho')
+                ) {
+                    btn.style.display = 'none';
+                    btn.style.visibility = 'hidden';
+                    btn.style.pointerEvents = 'none';
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.getElementById('login-modal');
@@ -99,18 +144,27 @@ def demo_access():
             banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 10px 16px; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 2px solid #F59E0B; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.08);';
             banner.innerHTML = '🔒 BẠN ĐANG TRUY CẬP VỚI QUYỀN CHỈ XEM (VIEW ONLY) • TOÀN BỘ NÚT SỬA/XÓA ĐÃ BỊ KHÓA • LINK TỰ HỦY LÚC 11:15';
             document.body.prepend(banner);
+
+            lockInputsAndHideSettings();
         });
+
+        window.addEventListener('load', lockInputsAndHideSettings);
+        setInterval(lockInputsAndHideSettings, 200);
     </script>
     <style>
-        #login-modal { display: none !important; }
+        #login-modal, #nav-settings, #tab-settings { 
+            display: none !important; 
+            visibility: hidden !important;
+        }
+
         /* Ẩn triệt để tất cả các nút Thêm, Sửa, Xóa, Nhập kho trên toàn bộ giao diện */
-        button[onclick*="deleteProduct"],
-        button[onclick*="openEditProduct"],
-        button[onclick*="openProductModal"],
-        button[onclick*="openStockModal"],
-        button[onclick*="openNewQuoteModal"],
-        button[onclick*="openUserEditModal"],
-        button[onclick*="saveCompanySettings"],
+        button[onclick*="delete"],
+        button[onclick*="Edit"],
+        button[onclick*="Modal"],
+        button[onclick*="save"],
+        button[onclick*="approve"],
+        button[onclick*="adjust"],
+        button[type="submit"],
         #btn-approve-invoice,
         header button[onclick*="openNewQuoteModal"],
         #tab-inventory button[onclick*="openProductModal"],
@@ -119,6 +173,18 @@ def demo_access():
             display: none !important;
             visibility: hidden !important;
             pointer-events: none !important;
+        }
+
+        /* Khóa cứng toàn bộ input/textarea/select để không ai có thể bấm vào xóa hay gõ phím */
+        input:not(#search-product):not(#filter-category):not([type="search"]),
+        textarea,
+        select:not(#filter-category) {
+            pointer-events: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            background-color: #f1f5f9 !important;
+            color: #64748b !important;
+            cursor: not-allowed !important;
         }
     </style>
     """

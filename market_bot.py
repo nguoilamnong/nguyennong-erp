@@ -66,10 +66,28 @@ def init_db():
         scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
-    for url, name in TRACKED_GROUPS:
-        c.execute("INSERT OR REPLACE INTO tracked_groups (url, name) VALUES (?, ?)", (url, name))
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS notification_channels (
+        chat_id TEXT PRIMARY KEY,
+        title TEXT,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    if ADMIN_CHAT_ID:
+        c.execute("INSERT OR IGNORE INTO notification_channels (chat_id, title) VALUES (?, ?)", (ADMIN_CHAT_ID, "Admin Private Chat"))
     conn.commit()
     conn.close()
+
+def register_group_channel(chat_id, title):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO notification_channels (chat_id, title) VALUES (?, ?)", (str(chat_id), title))
+        conn.commit()
+        conn.close()
+        print(f"[BOT] Registered notification channel: {title} ({chat_id})")
+    except Exception as e:
+        print(f"[BOT] Error registering channel: {e}")
 
 def get_tracked_groups():
     conn = sqlite3.connect(DB_PATH)
@@ -114,6 +132,24 @@ def send_telegram(text, reply_to_message_id=None, chat_id=None):
             requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10)
         except Exception as e:
             print(f"[BOT] Send telegram error: {e}")
+
+def broadcast_alert_and_digest(text):
+    """Broadcasts to BOTH Admin private chat AND all active Telegram groups"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT chat_id FROM notification_channels")
+        rows = c.fetchall()
+        conn.close()
+        targets = set([str(r[0]) for r in rows] if rows else [])
+    except Exception:
+        targets = set()
+
+    if ADMIN_CHAT_ID:
+        targets.add(str(ADMIN_CHAT_ID))
+
+    for tid in targets:
+        send_telegram(text, chat_id=tid)
 
 # ----------------- GEMINI INTENT & DIGEST ----------------- #
 def classify_post_intent(content):
@@ -250,7 +286,7 @@ def run_apify_scan():
 <i>\"{content[:300].strip()}...\"</i>
 
 🔗 <a href=\"{p_url}\"><b>👉 BẤM ĐÂY VÀO TƯ VẤN & BÁO GIÁ NGAY</b></a>"""
-                send_telegram(alert_msg)
+                broadcast_alert_and_digest(alert_msg)
 
         print(f"[BOT] Scan finished. New buyer leads alerted: {new_leads}")
         return new_leads
@@ -333,8 +369,9 @@ def telegram_polling_worker():
                 if not text:
                     continue
 
-                # Group filtering: only respond if tagged, replied, or command
+                # Group filtering: automatically register group and only respond if tagged, replied, or command
                 if chat_type in ["group", "supergroup"]:
+                    register_group_channel(chat_id, msg.get("chat", {}).get("title", "NNG Group"))
                     is_tagged = "@nguyen_nong_bot" in text
                     is_reply_to_bot = msg.get("reply_to_message", {}).get("from", {}).get("is_bot", False)
                     is_command = text.startswith("/")
@@ -345,7 +382,10 @@ def telegram_polling_worker():
                 print(f"[BOT RECV] {sender_name}: {text}")
 
                 if text == "/start":
-                    reply = f"Chào {sender_name} và anh em team Nguyên Nông Group! Em là Trợ lý Dữ liệu Thị trường, túc trực 24/7 để săn khách và phân tích thị trường cho team!"
+                    if chat_type in ["group", "supergroup"]:
+                        reply = f"Chào {sender_name} và anh em! Đã ghi nhận Group này vào danh sách nhận tin. Từ giờ mọi bài báo khách mới và bản tin 8h/16h sẽ tự động gửi vào CẢ group này lẫn tin riêng của sếp Hiếu!"
+                    else:
+                        reply = f"Chào {sender_name} và anh em team Nguyên Nông Group! Em là Trợ lý Dữ liệu Thị trường, túc trực 24/7 để săn khách và phân tích thị trường cho team!"
                 elif text == "/baocao":
                     reply = generate_market_digest("ngay lập tức")
                 elif text == "/quet":
@@ -384,7 +424,7 @@ def scheduler_worker():
             if digest_slot and (last_digest_date != f"{today_str}_{digest_slot}"):
                 print(f"[BOT] Triggering scheduled digest for {digest_slot}...")
                 digest_text = generate_market_digest(digest_slot)
-                send_telegram(digest_text)
+                broadcast_alert_and_digest(digest_text)
                 last_digest_date = f"{today_str}_{digest_slot}"
 
             # Run regular scan every 30 minutes

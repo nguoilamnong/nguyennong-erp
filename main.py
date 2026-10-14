@@ -40,8 +40,8 @@ def check_and_alert_low_stock(product_id: int):
         print(f"⚠️ [CẢNH BÁO TỒN KHO THẤP] Linh kiện: {prod['name']} ({prod['code']}) còn {prod['stock_qty']} {prod['unit']} -> Gửi tới: {receivers}")
     conn.close()
 
-# ----------------- TẠO LINK XEM TỬ TẠM THỜI (ĐÃ KHÓA NGAY LẬP TỨC) ----------------- #
-DEMO_EXPIRATION = datetime(2026, 10, 1, 0, 0, 0) # Đặt về quá khứ -> Khóa ngay lập tức 100%
+# ----------------- TẠO LINK XEM THỬ CHỈ ĐỌC (VIEW ONLY) - HẾT HẠN SAU 2 GIỜ ----------------- #
+DEMO_EXPIRATION = datetime(2026, 10, 14, 11, 15, 0) # Hết hạn lúc 11:15 ngày 14/10/2026 (sau 2 tiếng)
 
 @app.get("/demo")
 def demo_access():
@@ -50,9 +50,9 @@ def demo_access():
         return HTMLResponse(content="""
         <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #FFF5F5; color: #9B1C1C; min-height: 100vh;">
             <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid #F87171;">
-                <h2 style="color: #DC2626;">ĐƯỜNG LINK TRẢI NGHIỆM ĐÃ HẾT HẠN</h2>
-                <p style="color: #4B5563; font-size: 14px; line-height: 1.6;">Đường link tạm này được Nguyên Nông Group cài đặt chỉ tồn tại đến <strong>18:00 ngày 13/10/2026</strong> và hiện tại đã bị hủy tự động để đảm bảo an toàn bảo mật.</p>
-                <p style="color: #6B7280; font-size: 13px;">Vui lòng liên hệ Admin để được cấp tài khoản chính thức.</p>
+                <h2 style="color: #DC2626; margin-bottom: 10px;">ĐƯỜNG LINK THAM KHẢO ĐÃ HẾT HẠN</h2>
+                <p style="color: #4B5563; font-size: 14px; line-height: 1.6;">Đường link tạm này được Nguyên Nông Group giới hạn thời gian trong 2 giờ và đã tự động đóng lúc <strong>11:15 ngày 14/10/2026</strong> để bảo mật hệ thống.</p>
+                <p style="color: #6B7280; font-size: 13px; margin-top: 15px;">Vui lòng liên hệ Admin nếu bạn cần cấp quyền truy cập chính thức.</p>
             </div>
         </div>
         """, status_code=403)
@@ -61,26 +61,51 @@ def demo_access():
     with open(template_file, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Tự động gán quyền Khách Trải Nghiệm và ẩn hoàn toàn khung đăng nhập
+    # Cấu hình quyền CHỈ XEM (VIEW ONLY): Ẩn tất cả nút Thêm, Sửa, Xóa, Nhập hàng, Chốt đơn, Cài đặt
     guest_script = """
     <script>
         const guestUser = {
-            id: 999,
-            username: 'khach_trai_nghiem',
-            full_name: 'Khách Trải Nghiệm (Hết Hạn 18h)',
-            role: 'admin',
-            email: 'demo@nguyennong.vn'
+            id: 888,
+            username: 'khach_tham_khao',
+            full_name: 'Khách Tham Khảo (Chỉ Xem - Hết hạn 11:15)',
+            role: 'viewer',
+            email: 'thamkhao@nguyennong.vn'
         };
         localStorage.setItem('nng_user', JSON.stringify(guestUser));
         window.currentUser = guestUser;
+
+        // Vô hiệu hóa và chặn mọi hành động chỉnh sửa hoặc xóa
+        window.saveProduct = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền thêm hoặc chỉnh sửa dữ liệu!'); return false; };
+        window.deleteProduct = function() { alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền xóa linh kiện!'); return false; };
+        window.saveStockAdjust = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền nhập hoặc điều chỉnh kho!'); return false; };
+        window.saveQuote = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền tạo hoặc lưu báo giá!'); return false; };
+        window.approveAndDeductStock = function() { alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền duyệt hóa đơn hoặc trừ kho!'); return false; };
+        window.saveCompanySettings = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền sửa thông tin công ty!'); return false; };
+        window.saveUserEdit = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền sửa thông tin thành viên!'); return false; };
+
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.getElementById('login-modal');
             if (modal) modal.style.display = 'none';
             if (typeof applyUserSession === 'function') applyUserSession();
+            
+            // Hiện thanh thông báo Chế độ chỉ xem trên cùng
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 8px 16px; text-align: center; font-size: 12px; font-weight: bold; border-bottom: 1px solid #F59E0B; z-index: 100;';
+            banner.innerHTML = '🔒 CHẾ ĐỘ XEM THAM KHẢO (CHỈ XEM - KHÔNG THỂ CHỈNH SỬA DỮ LIỆU) • LINK TỰ ĐỘNG HỦY LÚC 11:15';
+            document.body.prepend(banner);
         });
     </script>
     <style>
         #login-modal { display: none !important; }
+        /* Ẩn các nút hành động nguy hiểm đối với người xem */
+        button[onclick*="deleteProduct"],
+        button[onclick*="openProductModal"],
+        button[onclick*="openStockModal"],
+        button[onclick*="openUserEditModal"],
+        button[onclick*="saveCompanySettings"],
+        #btn-approve-invoice {
+            display: none !important;
+        }
     </style>
     """
     html = html.replace("</head>", f"{guest_script}</head>")

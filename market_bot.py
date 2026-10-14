@@ -311,8 +311,14 @@ def handle_user_query(user_msg, sender_name="sếp"):
         reply += "Mọi bài cào về đều lấy từ đúng 6 group này, không có group nào khác."
         return reply
 
-    posts = get_all_scraped_posts(limit=25)
-    posts_context = [{"nhom": p[0], "nguoi_dang": p[1], "noi_dung": p[2], "link": p[3]} for p in posts]
+    # Instant Visual Feedback: Send 'typing' status to Telegram
+    try:
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendChatAction", json={"chat_id": ADMIN_CHAT_ID, "action": "typing"}, timeout=3)
+    except Exception:
+        pass
+
+    posts = get_all_scraped_posts(limit=12)
+    posts_context = [{"nhom": p[0], "nguoi_dang": p[1], "noi_dung": p[2][:250], "link": p[3]} for p in posts]
 
     prompt = f"""
 Bạn là Trợ lý Dữ liệu của Nguyên Nông Group (NNG).
@@ -334,24 +340,32 @@ QUY TẮC BẮT BUỘC:
 1. TUYỆT ĐỐI KHÔNG DÙNG TỪ "DẠ".
 2. BẮT BUỘC PHẢI GỌI NGƯỜI HỎI LÀ: "{sender_title}" (Bất kỳ nhân sự nào trong group hỏi đều phải gọi là sếp + Tên của họ).
 3. Trả lời dựa trên 100% SỰ THẬT trong danh sách bài viết ở trên.
-4. Nếu người dùng hỏi về một địa bàn hoặc sản phẩm:
+4. Trả lời ngắn gọn, súc tích, đi thẳng vào trọng tâm trong 2-4 câu.
+5. Nếu người dùng hỏi về một địa bàn hoặc sản phẩm:
    - Nếu KHÔNG CÓ nhu cầu/job liên quan: Trả lời thẳng thắn là KHÔNG CÓ trong các nhóm đã cào, nêu rõ bài mới nhất trong nhóm đó đang nói về nội dung gì.
    - Nếu CÓ bài liên quan: Trích dẫn rõ tên người đăng, nội dung và kèm đường link Facebook.
 """
-    # Try calling Gemini with timeout=35 and retry
+    # Fast Gemini call with optimized maxOutputTokens
     for attempt in range(2):
         try:
-            res = requests.post(GEMINI_URL, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=35).json()
+            res = requests.post(
+                GEMINI_URL,
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.1, "maxOutputTokens": 450}
+                },
+                timeout=25
+            ).json()
             if "candidates" in res and res["candidates"]:
                 return res["candidates"][0]["content"]["parts"][0]["text"]
         except Exception:
-            time.sleep(1)
+            time.sleep(0.5)
 
     # Intelligent Fallback directly from SQLite if Gemini times out
     if not posts:
         return f"Báo cáo {sender_title}, trong kho dữ liệu hiện tại chưa có bài viết nào mới được cào về từ 6 nhóm Facebook."
     
-    recent_info = f"Báo cáo {sender_name}, kiểm tra trực tiếp kho dữ liệu (hệ thống AI đang bận phản hồi chậm):\n\n"
+    recent_info = f"Báo cáo {sender_title}, kiểm tra trực tiếp kho dữ liệu:\n\n"
     recent_info += f"Trong 1-2 tiếng vừa qua, 6 nhóm Facebook hiện có <b>{len(posts)} bài viết gần nhất</b>.\n"
     recent_info += "Chưa ghi nhận bài viết nào có chủ rẫy hỏi mua hoặc tìm thợ thi công mới.\n\n"
     recent_info += "<b>Bài viết mới nhất ghi nhận:</b>\n"

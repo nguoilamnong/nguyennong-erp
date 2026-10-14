@@ -18,8 +18,17 @@ from datetime import datetime
 
 import database
 from database import get_db, hash_pw
+import market_bot
 
 app = FastAPI(title="Nguyên Nông Group - Hệ Thống Quản Lý")
+
+@app.on_event("startup")
+def startup_event():
+    try:
+        market_bot.start_bot_background_threads()
+        print("✅ [NNG] Market Bot 24/7 background service started successfully!")
+    except Exception as e:
+        print(f"⚠️ [NNG] Error starting Market Bot: {e}")
 
 # Serve static files (logo, scripts, styles)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

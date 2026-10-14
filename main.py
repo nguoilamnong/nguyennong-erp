@@ -61,7 +61,7 @@ def demo_access():
     with open(template_file, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Cấu hình quyền CHỈ XEM (VIEW ONLY): Ẩn tất cả nút Thêm, Sửa, Xóa, Nhập hàng, Chốt đơn, Cài đặt
+    # Cấu hình quyền CHỈ XEM (VIEW ONLY): Khóa chặt từ Giao diện đến Hệ thống
     guest_script = """
     <script>
         const guestUser = {
@@ -74,37 +74,51 @@ def demo_access():
         localStorage.setItem('nng_user', JSON.stringify(guestUser));
         window.currentUser = guestUser;
 
-        // Vô hiệu hóa và chặn mọi hành động chỉnh sửa hoặc xóa
-        window.saveProduct = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền thêm hoặc chỉnh sửa dữ liệu!'); return false; };
-        window.deleteProduct = function() { alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền xóa linh kiện!'); return false; };
-        window.saveStockAdjust = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền nhập hoặc điều chỉnh kho!'); return false; };
-        window.saveQuote = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền tạo hoặc lưu báo giá!'); return false; };
-        window.approveAndDeductStock = function() { alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền duyệt hóa đơn hoặc trừ kho!'); return false; };
-        window.saveCompanySettings = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền sửa thông tin công ty!'); return false; };
-        window.saveUserEdit = function(e) { if(e) e.preventDefault(); alert('Bạn đang ở chế độ CHỈ XEM (View Only), không có quyền sửa thông tin thành viên!'); return false; };
+        // Chặn hoàn toàn tất cả các hàm sửa/xóa/nhập
+        window.deleteProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền xóa sản phẩm này!'); return false; };
+        window.openEditProduct = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền chỉnh sửa thông tin!'); return false; };
+        window.openProductModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thêm mới!'); return false; };
+        window.openStockModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền nhập hoặc điều chỉnh kho!'); return false; };
+        window.openNewQuoteModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền tạo báo giá!'); return false; };
+        window.openUserEditModal = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền chỉnh sửa thành viên!'); return false; };
+        window.saveProduct = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Hành động bị từ chối!'); return false; };
+        window.saveStockAdjust = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Hành động bị từ chối!'); return false; };
+        window.saveQuote = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Hành động bị từ chối!'); return false; };
+        window.approveAndDeductStock = function() { alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền duyệt hóa đơn hoặc trừ kho!'); return false; };
+        window.saveCompanySettings = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin công ty!'); return false; };
+        window.saveUserEdit = function(e) { if(e) e.preventDefault(); alert('TÀI KHOẢN CHỈ XEM: Bạn không có quyền thay đổi thông tin thành viên!'); return false; };
 
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.getElementById('login-modal');
             if (modal) modal.style.display = 'none';
             if (typeof applyUserSession === 'function') applyUserSession();
             
-            // Hiện thanh thông báo Chế độ chỉ xem trên cùng
+            // Thanh thông báo trạng thái Chỉ Xem trên đầu trang
             const banner = document.createElement('div');
-            banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 8px 16px; text-align: center; font-size: 12px; font-weight: bold; border-bottom: 1px solid #F59E0B; z-index: 100;';
-            banner.innerHTML = '🔒 CHẾ ĐỘ XEM THAM KHẢO (CHỈ XEM - KHÔNG THỂ CHỈNH SỬA DỮ LIỆU) • LINK TỰ ĐỘNG HỦY LÚC 11:15';
+            banner.id = 'demo-alert-banner';
+            banner.style.cssText = 'background: #FEF3C7; color: #92400E; padding: 10px 16px; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 2px solid #F59E0B; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.08);';
+            banner.innerHTML = '🔒 BẠN ĐANG TRUY CẬP VỚI QUYỀN CHỈ XEM (VIEW ONLY) • TOÀN BỘ NÚT SỬA/XÓA ĐÃ BỊ KHÓA • LINK TỰ HỦY LÚC 11:15';
             document.body.prepend(banner);
         });
     </script>
     <style>
         #login-modal { display: none !important; }
-        /* Ẩn các nút hành động nguy hiểm đối với người xem */
+        /* Ẩn triệt để tất cả các nút Thêm, Sửa, Xóa, Nhập kho trên toàn bộ giao diện */
         button[onclick*="deleteProduct"],
+        button[onclick*="openEditProduct"],
         button[onclick*="openProductModal"],
         button[onclick*="openStockModal"],
+        button[onclick*="openNewQuoteModal"],
         button[onclick*="openUserEditModal"],
         button[onclick*="saveCompanySettings"],
-        #btn-approve-invoice {
+        #btn-approve-invoice,
+        header button[onclick*="openNewQuoteModal"],
+        #tab-inventory button[onclick*="openProductModal"],
+        #tab-quotes button[onclick*="openNewQuoteModal"],
+        #tab-settings button[type="submit"] {
             display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         }
     </style>
     """

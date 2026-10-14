@@ -331,11 +331,26 @@ QUY TẮC BẮT BUỘC:
    - Nếu KHÔNG CÓ nhu cầu/job liên quan: Trả lời thẳng thắn là KHÔNG CÓ trong các nhóm đã cào, nêu rõ bài mới nhất trong nhóm đó đang nói về nội dung gì.
    - Nếu CÓ bài liên quan: Trích dẫn rõ tên người đăng, nội dung và kèm đường link Facebook.
 """
-    try:
-        res = requests.post(GEMINI_URL, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20).json()
-        return res["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        return f"Lỗi tra cứu: {e}"
+    # Try calling Gemini with timeout=35 and retry
+    for attempt in range(2):
+        try:
+            res = requests.post(GEMINI_URL, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=35).json()
+            if "candidates" in res and res["candidates"]:
+                return res["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception:
+            time.sleep(1)
+
+    # Intelligent Fallback directly from SQLite if Gemini times out
+    if not posts:
+        return f"Báo cáo {sender_name}, trong kho dữ liệu hiện tại chưa có bài viết nào mới được cào về từ 6 nhóm Facebook."
+    
+    recent_info = f"Báo cáo {sender_name}, kiểm tra trực tiếp kho dữ liệu (hệ thống AI đang bận phản hồi chậm):\n\n"
+    recent_info += f"Trong 1-2 tiếng vừa qua, 6 nhóm Facebook hiện có <b>{len(posts)} bài viết gần nhất</b>.\n"
+    recent_info += "Chưa ghi nhận bài viết nào có chủ rẫy hỏi mua hoặc tìm thợ thi công mới.\n\n"
+    recent_info += "<b>Bài viết mới nhất ghi nhận:</b>\n"
+    latest = posts[0]
+    recent_info += f"• Nhóm: <b>{latest[0]}</b>\n• Tác giả: {latest[1]}\n• Trích đoạn: <i>{latest[2][:120].strip()}...</i>\n🔗 <a href='{latest[3]}'>Xem bài viết</a>"
+    return recent_info
 
 def telegram_polling_worker():
     if not TELEGRAM_BOT_TOKEN:

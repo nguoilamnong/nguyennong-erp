@@ -13,6 +13,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "").strip()
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "8407012068").strip()
+GROUP_CHAT_ID = os.environ.get("GROUP_CHAT_ID", "-5476176611").strip()
 
 # Local fallback if running on development machine
 if not (TELEGRAM_BOT_TOKEN and GEMINI_API_KEY and APIFY_TOKEN):
@@ -151,6 +152,8 @@ def broadcast_alert_and_digest(text):
 
     if ADMIN_CHAT_ID:
         targets.add(str(ADMIN_CHAT_ID))
+    if GROUP_CHAT_ID:
+        targets.add(str(GROUP_CHAT_ID))
 
     for tid in targets:
         send_telegram(text, chat_id=tid)

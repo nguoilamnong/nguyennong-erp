@@ -484,6 +484,7 @@ def telegram_polling_worker():
 def scheduler_worker():
     print("[BOT] Scheduler Worker started (Scans every 30m, Digest at 08:00 & 16:00)...")
     last_digest_date = ""
+    last_scan_time = 0
 
     while True:
         try:
@@ -495,9 +496,9 @@ def scheduler_worker():
 
             # Daily Digest at 08:00 and 16:00
             digest_slot = None
-            if hour == 8 and minute <= 5:
+            if hour == 8 and minute <= 30:
                 digest_slot = "08:00"
-            elif hour == 16 and minute <= 5:
+            elif hour == 16 and minute <= 30:
                 digest_slot = "16:00"
 
             if digest_slot and (last_digest_date != f"{today_str}_{digest_slot}"):
@@ -506,14 +507,16 @@ def scheduler_worker():
                 broadcast_alert_and_digest(digest_text)
                 last_digest_date = f"{today_str}_{digest_slot}"
 
-            # Run regular scan every 30 minutes
-            run_apify_scan()
+            # Run regular scan every 30 minutes (1800s)
+            if time.time() - last_scan_time >= 1800:
+                last_scan_time = time.time()
+                run_apify_scan()
 
         except Exception as e:
             print(f"[BOT] Scheduler error: {e}")
 
-        # Sleep 30 minutes between scans
-        time.sleep(1800)
+        # Check clock every 30s so digest window is never missed
+        time.sleep(30)
 
 # ----------------- MAIN ENTRYPOINT FOR CLOUD / RENDER ----------------- #
 def start_bot_background_threads():

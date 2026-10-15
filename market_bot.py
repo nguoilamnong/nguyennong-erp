@@ -339,21 +339,29 @@ def handle_user_query(user_msg, sender_name="sếp"):
         return reply
 
     # 0. Instant Link Matcher (Direct from SQLite in 0.01s, 0% timeout risk)
-    if any(k in lower for k in ["gửi link", "cho link", "link bài", "đưa link", "link đâu", "bài này", "cho xin link", "xin link"]):
+    if "link" in lower or any(k in lower for k in ["bài này", "bài của", "đưa link", "cho link", "ở đâu"]):
         all_posts = get_all_scraped_posts(limit=50)
         matched = None
+        # 1. First priority: match exact author name mentioned (e.g., NiceFish7578, Thuận, etc.)
         for p in all_posts:
-            author = p[1] or ""
-            content = p[2] or ""
-            if author and author.lower() in lower:
+            author = (p[1] or "").lower()
+            if author and author in lower:
                 matched = p
                 break
-            # Match keywords from user message
-            content_words = [w for w in content.lower().split() if len(w) >= 3]
-            match_count = sum(1 for w in content_words[:20] if w in lower)
-            if match_count >= 2:
-                matched = p
-                break
+        
+        # 2. Second priority: match content keywords
+        if not matched:
+            for p in all_posts:
+                content = (p[2] or "").lower()
+                content_words = [w for w in content.split() if len(w) >= 3]
+                match_count = sum(1 for w in content_words[:30] if w in lower)
+                if match_count >= 2:
+                    matched = p
+                    break
+        
+        # 3. Third priority: fallback to the latest scraped post if user just asked for link
+        if not matched and all_posts:
+            matched = all_posts[0]
 
         if matched:
             return f"Báo cáo {sender_title}, đây là link bài viết sếp cần tìm:\n\n👤 Tác giả: <b>{matched[1]}</b>\n🏢 Nhóm: <b>{matched[0]}</b>\n💬 Trích đoạn: <i>{matched[2][:150].strip()}...</i>\n\n🔗 <b>Link Facebook:</b> <a href='{matched[3]}'>{matched[3]}</a>"

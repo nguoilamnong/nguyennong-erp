@@ -33,7 +33,7 @@ if not (TELEGRAM_BOT_TOKEN and GEMINI_API_KEY and APIFY_TOKEN):
             print(f"[BOT] Error reading local key file: {e}")
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leads.db")
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={GEMINI_API_KEY}"
+GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"]
 
 # 6 Official Groups of Nguyên Nông Group
 TRACKED_GROUPS = [
@@ -180,34 +180,35 @@ def broadcast_alert_and_digest(text):
         send_telegram(text, chat_id=tid)
 
 # ----------------- GEMINI INTENT & DIGEST ----------------- #
-def call_gemini_safe(prompt, max_tokens=700, retries=3, response_mime_type=None):
+def call_gemini_safe(prompt, max_tokens=700, retries=2, response_mime_type=None):
     if not GEMINI_API_KEY:
         return None
     gen_config = {"temperature": 0.1, "maxOutputTokens": max_tokens}
     if response_mime_type:
         gen_config["responseMimeType"] = response_mime_type
 
-    for attempt in range(1, retries + 1):
-        try:
-            res = requests.post(
-                GEMINI_URL,
-                json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": gen_config},
-                timeout=30
-            ).json()
+    for model_name in GEMINI_MODELS:
+        model_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+        for attempt in range(1, retries + 1):
+            try:
+                res = requests.post(
+                    model_url,
+                    json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": gen_config},
+                    timeout=25
+                ).json()
 
-            if isinstance(res, dict):
-                candidates = res.get("candidates")
-                if candidates and isinstance(candidates, list) and len(candidates) > 0:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and isinstance(parts, list) and len(parts) > 0:
-                        text = parts[0].get("text", "")
-                        if text and text.strip():
-                            return text.strip()
-        except Exception as e:
-            print(f"[BOT] Gemini attempt {attempt}/{retries} error: {e}")
-        
-        if attempt < retries:
-            time.sleep(1.5)
+                if isinstance(res, dict):
+                    candidates = res.get("candidates")
+                    if candidates and isinstance(candidates, list) and len(candidates) > 0:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and isinstance(parts, list) and len(parts) > 0:
+                            text = parts[0].get("text", "")
+                            if text and text.strip():
+                                return text.strip()
+            except Exception as e:
+                print(f"[BOT] Model {model_name} attempt {attempt}/{retries} error: {e}")
+            
+            time.sleep(1)
 
     return None
 

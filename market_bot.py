@@ -13,7 +13,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "").strip()
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "8407012068").strip()
-GROUP_CHAT_ID = os.environ.get("GROUP_CHAT_ID", "-5476176611").strip()
+GROUP_CHAT_ID = os.environ.get("GROUP_CHAT_ID", "-1004473463455").strip()
 
 # Local fallback if running on development machine
 if not (TELEGRAM_BOT_TOKEN and GEMINI_API_KEY and APIFY_TOKEN):
@@ -76,6 +76,8 @@ def init_db():
     """)
     if ADMIN_CHAT_ID:
         c.execute("INSERT OR IGNORE INTO notification_channels (chat_id, title) VALUES (?, ?)", (ADMIN_CHAT_ID, "Admin Private Chat"))
+    if GROUP_CHAT_ID:
+        c.execute("INSERT OR IGNORE INTO notification_channels (chat_id, title) VALUES (?, ?)", (GROUP_CHAT_ID, "Nguyên Nông Group"))
     conn.commit()
     conn.close()
 
@@ -132,9 +134,16 @@ def send_telegram(text, reply_to_message_id=None, chat_id=None):
         try:
             res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10).json()
             if not res.get("ok"):
-                # If HTML parsing fails, fallback to plain text
-                payload.pop("parse_mode", None)
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10)
+                # Automatically handle group migration to supergroup
+                migrate_id = res.get("parameters", {}).get("migrate_to_chat_id")
+                if migrate_id:
+                    payload["chat_id"] = str(migrate_id)
+                    register_group_channel(migrate_id, "Nguyên Nông Group")
+                    res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10).json()
+                if not res.get("ok"):
+                    # If HTML parsing fails, fallback to plain text
+                    payload.pop("parse_mode", None)
+                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json=payload, timeout=10)
         except Exception as e:
             print(f"[BOT] Send telegram error: {e}")
 

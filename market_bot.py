@@ -401,7 +401,7 @@ def handle_user_query(user_msg, sender_name="sếp"):
         sender_title = f"sếp {s_clean}"
 
     lower = user_msg.lower()
-    if any(k in lower for k in ["group nào", "nhóm nào", "mấy group", "danh sách group", "nguồn nào"]):
+    if any(k in lower for k in ["group nào", "nhóm nào", "mấy group", "bao nhiêu group", "mấy nhóm", "bao nhiêu nhóm", "danh sách group", "danh sách nhóm", "nguồn nào"]):
         groups = get_tracked_groups()
         reply = f"Báo cáo {sender_title}, hiện tại bot đang theo dõi CHÍNH XÁC {len(groups)} group Facebook sau:\n\n"
         for idx, g in enumerate(groups, 1):

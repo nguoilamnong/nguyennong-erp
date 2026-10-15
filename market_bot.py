@@ -83,6 +83,28 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO notification_channels (chat_id, title) VALUES (?, ?)", (ADMIN_CHAT_ID, "Admin Private Chat"))
     if GROUP_CHAT_ID:
         c.execute("INSERT OR IGNORE INTO notification_channels (chat_id, title) VALUES (?, ?)", (GROUP_CHAT_ID, "Nguyên Nông Group"))
+
+    # Seed 6 tracked groups
+    for url, name in TRACKED_GROUPS:
+        c.execute("INSERT OR IGNORE INTO tracked_groups (url, name) VALUES (?, ?)", (url, name))
+
+    # Auto-seed initial posts if table is empty
+    c.execute("SELECT count(*) FROM scraped_posts")
+    if c.fetchone()[0] == 0 and APIFY_TOKEN:
+        try:
+            items = requests.get("https://api.apify.com/v2/datasets/1YNsKOH38qtsp8klk/items", headers={"Authorization": f"Bearer {APIFY_TOKEN}"}, timeout=10).json()
+            for it in items:
+                g_name = it.get("groupName") or it.get("groupTitle") or ""
+                p_url = it.get("url") or it.get("postUrl") or ""
+                user = it.get("user", {})
+                author = user.get("name") if isinstance(user, dict) else str(user)
+                text = it.get("text") or ""
+                if p_url:
+                    c.execute("INSERT OR IGNORE INTO scraped_posts (group_name, post_url, author, content, intent) VALUES (?, ?, ?, ?, ?)", (g_name, p_url, author, text, "OTHER"))
+            print("[BOT] Successfully seeded initial scraped posts on startup!")
+        except Exception as e:
+            print(f"[BOT] Seed error: {e}")
+
     conn.commit()
     conn.close()
 

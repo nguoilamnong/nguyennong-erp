@@ -202,7 +202,7 @@ Bạn là Trợ lý Dữ liệu của Nguyên Nông Group (NNG).
 Soạn bản tin tổng hợp thị trường lúc {time_label} gửi Telegram cho team Nguyên Nông Group.
 
 Định dạng HTML Telegram (<b>, <i>, <code>).
-Mở đầu: 📢 <b>Gửi mấy ní team Nguyên Nông Group!</b> Dưới đây là bản tin tổng hợp thị trường lúc {time_label} hôm nay:
+Mở đầu: 📢 <b>Kính gửi Chủ tịch Tùng cùng các anh em team Nguyên Nông Group!</b> Dưới đây là bản tin tổng hợp thị trường lúc {time_label} hôm nay:
 
 Cấu trúc:
 1. 🟢 <b>Tình hình quét:</b> Quét qua 6 group trọng điểm.
@@ -215,7 +215,8 @@ Dữ liệu thật cào được:
 
 Quy tắc:
 - Không dùng từ "dạ".
-- Giọng văn gần gũi ('mấy ní', 'team mình', 'anh em').
+- Luôn mở đầu chào trang trọng: "📢 <b>Kính gửi Chủ tịch Tùng cùng các anh em team Nguyên Nông Group!</b>".
+- Giọng văn gần gũi, quyết liệt ('team mình', 'anh em').
 - Nếu trong dữ liệu không có khách hỏi mua: Báo cáo trung thực tình hình chung, không tự bịa.
 """
     try:
@@ -279,6 +280,7 @@ def run_apify_scan():
                 loc = meta.get("location", "Tây Nguyên")
                 
                 alert_msg = f"""🔥 <b>PHÁT HIỆN KHÁCH CẦN BÁO GIÁ / THI CÔNG!</b>
+📢 <i>Kính gửi Chủ tịch Tùng cùng các anh em team Nguyên Nông Group:</i>
 
 👤 <b>Người đăng:</b> {author}
 📍 <b>Khu vực:</b> {loc}
@@ -303,11 +305,15 @@ def run_apify_scan():
 
 # ----------------- TELEGRAM INTERACTION ----------------- #
 def handle_user_query(user_msg, sender_name="sếp"):
-    # Format sender title: ALWAYS call everyone 'sếp + [Tên]'
-    if not sender_name.lower().startswith("sếp"):
-        sender_title = f"sếp {sender_name}"
+    # Format sender title: ALWAYS call everyone 'sếp + [Tên]', riêng Tùng thì gọi 'Chủ tịch Tùng'
+    s_clean = sender_name.strip()
+    s_lower = s_clean.lower()
+    if "tùng" in s_lower or "tung" in s_lower:
+        sender_title = "Chủ tịch Tùng"
+    elif s_lower.startswith("sếp") or s_lower.startswith("chủ tịch"):
+        sender_title = s_clean
     else:
-        sender_title = sender_name
+        sender_title = f"sếp {s_clean}"
 
     lower = user_msg.lower()
     if any(k in lower for k in ["group nào", "nhóm nào", "mấy group", "danh sách group", "nguồn nào"]):
@@ -365,7 +371,7 @@ Câu hỏi: "{user_msg}"
 
 QUY TẮC BẮT BUỘC:
 1. TUYỆT ĐỐI KHÔNG DÙNG TỪ "DẠ".
-2. BẮT BUỘC PHẢI GỌI NGƯỜI HỎI LÀ: "{sender_title}" (Bất kỳ nhân sự nào trong group hỏi đều phải gọi là sếp + Tên của họ).
+2. BẮT BUỘC PHẢI GỌI NGƯỜI HỎI LÀ: "{sender_title}" (Nếu người hỏi là Tùng thì gọi là 'Chủ tịch Tùng', các thành viên khác thì gọi là 'sếp + Tên của họ').
 3. Trả lời dựa trên 100% SỰ THẬT trong danh sách bài viết ở trên.
 4. Trả lời ngắn gọn, súc tích, đi thẳng vào trọng tâm trong 2-4 câu.
 5. Nếu người dùng hỏi về một địa bàn hoặc sản phẩm:
@@ -444,11 +450,21 @@ def telegram_polling_worker():
 
                 print(f"[BOT RECV] {sender_name}: {text}")
 
+                # Format sender title
+                s_clean = sender_name.strip()
+                s_lower = s_clean.lower()
+                if "tùng" in s_lower or "tung" in s_lower:
+                    sender_title = "Chủ tịch Tùng"
+                elif s_lower.startswith("sếp") or s_lower.startswith("chủ tịch"):
+                    sender_title = s_clean
+                else:
+                    sender_title = f"sếp {s_clean}"
+
                 if text == "/start":
                     if chat_type in ["group", "supergroup"]:
-                        reply = f"Chào {sender_name} và anh em! Đã ghi nhận Group này vào danh sách nhận tin. Từ giờ mọi bài báo khách mới và bản tin 8h/16h sẽ tự động gửi vào CẢ group này lẫn tin riêng của sếp Hiếu!"
+                        reply = "Chào Chủ tịch Tùng cùng toàn thể anh em team Nguyên Nông Group! 🔥\n\nEm là Trợ lý Dữ liệu Thị trường NNG, chính thức có mặt để phục vụ anh em 24/7!\n\n✅ ĐÃ KÍCH HOẠT THÀNH CÔNG:\n1. Đã lưu Group này vào danh sách nhận tin tự động trên Cloud.\n2. Mỗi khi có khách cần mua / thi công (tưới, hồ bạt HDPE, bơm mặt trời): Chuông sẽ rung đồng thời ở CẢ group này lẫn tin riêng của sếp Hiếu kèm link bài Facebook.\n3. Đúng 8h00 sáng & 16h00 chiều: Tự động gửi bản tin phân tích thị trường kính gửi Chủ tịch Tùng cùng toàn thể anh em.\n4. Bất kỳ sếp nào trong nhóm cần tra cứu dữ liệu bài viết cứ tag @nguyen_nong_bot là em trả lời ngay!\n\nChúc team Nguyên Nông Group bùng nổ doanh số! 🚀"
                     else:
-                        reply = f"Chào {sender_name} và anh em team Nguyên Nông Group! Em là Trợ lý Dữ liệu Thị trường, túc trực 24/7 để săn khách và phân tích thị trường cho team!"
+                        reply = f"Chào {sender_title} và anh em team Nguyên Nông Group! Em là Trợ lý Dữ liệu Thị trường, túc trực 24/7 để săn khách và phân tích thị trường cho team!"
                 elif text == "/baocao":
                     reply = generate_market_digest("ngay lập tức")
                 elif text == "/quet":

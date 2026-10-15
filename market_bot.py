@@ -583,12 +583,14 @@ def scheduler_worker():
             minute = now_vn.minute
             today_str = now_vn.strftime("%Y-%m-%d")
 
-            # Daily Digest at 08:00 and 16:00
+            # Daily Digest at 08:00, 16:00, and 20:30
             digest_slot = None
             if hour == 8 and minute <= 30:
                 digest_slot = "08:00"
             elif hour == 16 and minute <= 30:
                 digest_slot = "16:00"
+            elif hour == 20 and minute >= 30:
+                digest_slot = "20:30"
 
             if digest_slot and (last_digest_date != f"{today_str}_{digest_slot}"):
                 print(f"[BOT] Triggering scheduled digest for {digest_slot}...")

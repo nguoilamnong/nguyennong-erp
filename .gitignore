@@ -6,3 +6,5 @@ NGUYEN_NONG_GROUP_DEPLOY.zip
 MAT_KHAU_ADMIN_NNG.txt
 keybotnng.txt
 leads.db
+cloudflare_worker.js
+wrangler.toml

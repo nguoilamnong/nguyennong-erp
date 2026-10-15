@@ -67,6 +67,11 @@ def init_db():
         scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+    # Ensure intent column exists in existing tables
+    try:
+        c.execute("ALTER TABLE scraped_posts ADD COLUMN intent TEXT")
+    except Exception:
+        pass
     c.execute("""
     CREATE TABLE IF NOT EXISTS notification_channels (
         chat_id TEXT PRIMARY KEY,
